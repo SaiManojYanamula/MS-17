@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import TopBar from '@/components/TopBar';
+import AddZoneModal from '@/components/AddZoneModal';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { formatDate, formatPlan, memberNameOf } from '@/lib/format';
@@ -10,12 +11,14 @@ import { formatDate, formatPlan, memberNameOf } from '@/lib/format';
 export default function SeatingPage() {
   const { hasRole } = useAuth();
   const canManage = hasRole('TENANT_OWNER', 'BRANCH_MANAGER', 'STAFF');
+  const canAddZone = hasRole('TENANT_OWNER', 'BRANCH_MANAGER');
 
   const [zones, setZones] = useState<any[]>([]);
   const [members, setMembers] = useState<any[]>([]);
   const [selectedSeatId, setSelectedSeatId] = useState<string | null>(null);
   const [seat, setSeat] = useState<any>(null);
   const [editing, setEditing] = useState(false);
+  const [showAddZone, setShowAddZone] = useState(false);
   const [assignMemberId, setAssignMemberId] = useState('');
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('UPI');
@@ -94,7 +97,17 @@ export default function SeatingPage() {
           <h1 className="text-2xl font-serif font-semibold">Seating Management</h1>
           <p className="text-sm text-gray-500">Click any seat for details</p>
         </div>
-        <TopBar />
+        <div className="flex items-center gap-3">
+          <TopBar />
+          {canAddZone && (
+            <button
+              onClick={() => setShowAddZone(true)}
+              className="bg-sidebar text-white text-sm px-4 py-2 rounded-lg"
+            >
+              + Add Zone
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="flex gap-4 text-xs mb-4">
@@ -280,6 +293,10 @@ export default function SeatingPage() {
           )}
         </div>
       </div>
+
+      {showAddZone && (
+        <AddZoneModal onClose={() => setShowAddZone(false)} onSuccess={refetchZones} />
+      )}
     </div>
   );
 }

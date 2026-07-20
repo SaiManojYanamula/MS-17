@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Query, Req } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query, Req } from '@nestjs/common';
 import { SeatingService } from './seating.service';
 import { TenantRequest } from '../common/middleware/tenant.middleware';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -11,6 +11,15 @@ export class SeatingController {
   @Roles('TENANT_OWNER', 'BRANCH_MANAGER', 'STAFF')
   getSeatMap(@Req() req: TenantRequest, @Query('branchId') branchId?: string) {
     return this.seatingService.getSeatMap(req.tenantId!, branchId ?? req.branchId!);
+  }
+
+  @Post('zones')
+  @Roles('TENANT_OWNER', 'BRANCH_MANAGER')
+  createZone(
+    @Req() req: TenantRequest,
+    @Body() body: { name: string; startSeat: number; endSeat: number },
+  ) {
+    return this.seatingService.createZone(req.tenantId!, req.branchId!, body);
   }
 
   @Get(':seatId')

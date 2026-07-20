@@ -6,7 +6,6 @@ import TopBar from '@/components/TopBar';
 import StatusPill from '@/components/StatusPill';
 import AddMemberModal from '@/components/AddMemberModal';
 import EditMemberModal from '@/components/EditMemberModal';
-import CreateLoginModal from '@/components/CreateLoginModal';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { mockMembers, mockMemberCounts } from '@/lib/mockData';
@@ -22,14 +21,12 @@ const tabs = [
 export default function MembersPage() {
   const { hasRole } = useAuth();
   const canDelete = hasRole('TENANT_OWNER', 'BRANCH_MANAGER');
-  const canManageLogins = hasRole('TENANT_OWNER', 'BRANCH_MANAGER', 'STAFF');
   const [filter, setFilter] = useState<'all' | 'active' | 'expiring' | 'expired'>('all');
   const [search, setSearch] = useState('');
   const [members, setMembers] = useState(mockMembers);
   const [counts, setCounts] = useState(mockMemberCounts);
   const [showAdd, setShowAdd] = useState(false);
   const [editingMember, setEditingMember] = useState<any>(null);
-  const [creatingLoginFor, setCreatingLoginFor] = useState<any>(null);
   const [error, setError] = useState('');
   const highlightId = useSearchParams().get('highlight');
 
@@ -72,7 +69,7 @@ export default function MembersPage() {
           <TopBar value={search} onChange={setSearch} />
           <button
             onClick={() => setShowAdd(true)}
-            className="bg-sidebar text-white text-sm px-4 py-2 rounded-lg"
+            className="bg-sidebar text-white text-sm px-4 py-2 rounded-lg shadow-sm shadow-accent/20"
           >
             + Add Member
           </button>
@@ -84,12 +81,16 @@ export default function MembersPage() {
           <button
             key={t.key}
             onClick={() => setFilter(t.key as any)}
-            className={`pb-3 flex items-center gap-2 ${
-              filter === t.key ? 'border-b-2 border-sidebar font-medium' : 'text-gray-400'
+            className={`pb-3 flex items-center gap-2 transition-colors ${
+              filter === t.key ? 'border-b-2 border-accent text-accent font-medium' : 'text-gray-400 hover:text-gray-600'
             }`}
           >
             {t.label}
-            <span className="bg-black/5 rounded-full px-2 py-0.5 text-xs">
+            <span
+              className={`rounded-full px-2 py-0.5 text-xs ${
+                filter === t.key ? 'bg-accent/10 text-accent' : 'bg-black/5 text-gray-500'
+              }`}
+            >
               {counts[t.key as keyof typeof counts]}
             </span>
           </button>
@@ -102,13 +103,13 @@ export default function MembersPage() {
         {members.map((m: any) => (
           <div
             key={m.id}
-            className={`bg-card rounded-xl p-4 border ${
+            className={`group bg-card rounded-2xl p-4 border transition-all hover:shadow-lg hover:shadow-black/5 hover:-translate-y-0.5 ${
               m.id === highlightId ? 'ring-2 ring-accent border-transparent' : 'border-black/5'
             }`}
           >
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full bg-sidebar text-white flex items-center justify-center text-xs font-medium">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-accent to-accent/70 text-white flex items-center justify-center text-xs font-semibold shadow-sm">
                   {m.name.split(' ').map((p: string) => p[0]).join('')}
                 </div>
                 <div>
@@ -116,11 +117,11 @@ export default function MembersPage() {
                   <div className="text-xs text-gray-400">{m.goalTag}</div>
                 </div>
               </div>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                 <button
                   onClick={() => setEditingMember(m)}
                   title="Edit"
-                  className="w-6 h-6 rounded-full hover:bg-black/5 text-xs"
+                  className="w-7 h-7 rounded-full hover:bg-accent/10 hover:text-accent text-xs"
                 >
                   ✎
                 </button>
@@ -128,7 +129,7 @@ export default function MembersPage() {
                   <button
                     onClick={() => deleteMember(m)}
                     title="Delete"
-                    className="w-6 h-6 rounded-full hover:bg-expiring/10 text-expiring text-xs"
+                    className="w-7 h-7 rounded-full hover:bg-expiring/10 text-expiring text-xs"
                   >
                     🗑
                   </button>
@@ -139,6 +140,10 @@ export default function MembersPage() {
               <div className="flex justify-between">
                 <span className="text-gray-400">Seat</span>
                 <span className="font-medium">#{seatNumberOf(m.seat)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-400">Phone</span>
+                <span className="font-medium">{m.phone || '—'}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-400">Plan</span>
@@ -152,19 +157,16 @@ export default function MembersPage() {
                 <span className="text-gray-400">Status</span>
                 <StatusPill status={m.status} />
               </div>
-              <div className="flex justify-between items-center pt-1 border-t border-black/5 mt-1">
+              <div className="flex justify-between items-center pt-2 border-t border-black/5 mt-1">
                 <span className="text-gray-400">Portal</span>
                 {m.user ? (
-                  <span className="text-xs text-free font-medium truncate max-w-[140px]">{m.user.email}</span>
-                ) : canManageLogins ? (
-                  <button
-                    onClick={() => setCreatingLoginFor(m)}
-                    className="text-xs text-accent font-medium"
-                  >
-                    + Create Login
-                  </button>
+                  <span className="text-[10px] bg-free/15 text-free font-medium rounded-full px-2 py-0.5">
+                    Active
+                  </span>
                 ) : (
-                  <span className="text-xs text-gray-400">Not enabled</span>
+                  <span className="text-[10px] bg-black/5 text-gray-400 font-medium rounded-full px-2 py-0.5">
+                    {m.phone ? 'Pending' : 'No phone'}
+                  </span>
                 )}
               </div>
             </div>
@@ -180,13 +182,6 @@ export default function MembersPage() {
         <EditMemberModal
           member={editingMember}
           onClose={() => setEditingMember(null)}
-          onSuccess={refetch}
-        />
-      )}
-      {creatingLoginFor && (
-        <CreateLoginModal
-          member={creatingLoginFor}
-          onClose={() => setCreatingLoginFor(null)}
           onSuccess={refetch}
         />
       )}

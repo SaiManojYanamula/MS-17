@@ -1,5 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma.service';
+
+const DEFAULT_STUDENT_PASSWORD = '1234';
 
 @Injectable()
 export class MembersService {
@@ -58,14 +61,44 @@ export class MembersService {
   }
 
   async create(tenantId: string, branchId: string, data: any) {
-    return this.prisma.member.create({
+    const member = await this.prisma.member.create({
       data: { ...data, tenantId, branchId },
     });
+    if (member.phone) {
+      await this.createLoginIfMissing(tenantId, branchId, member.id, member.name, member.phone);
+    }
+    return this.findOne(tenantId, member.id);
   }
 
   async update(tenantId: string, id: string, data: any) {
-    await this.findOne(tenantId, id); // ensures tenant ownership before mutating
-    return this.prisma.member.update({ where: { id }, data });
+    const existing = await this.findOne(tenantId, id); // ensures tenant ownership before mutating
+    const member = await this.prisma.member.update({ where: { id }, data });
+    if (member.phone && !existing.user) {
+      await this.createLoginIfMissing(tenantId, existing.branchId, member.id, member.name, member.phone);
+    }
+    return this.findOne(tenantId, id);
+  }
+
+  // Every member with a phone number gets a STUDENT portal login automatically
+  // — phone number as the username, "1234" as the default password. Silently
+  // skipped if that phone is already taken by a login (e.g. reused across
+  // tenants) since User.email is globally unique — staff can retry with a
+  // different number via Edit.
+  private async createLoginIfMissing(
+    tenantId: string,
+    branchId: string,
+    memberId: string,
+    name: string,
+    phone: string,
+  ) {
+    try {
+      const hashed = await bcrypt.hash(DEFAULT_STUDENT_PASSWORD, 10);
+      await this.prisma.user.create({
+        data: { tenantId, branchId, name, email: phone, password: hashed, role: 'STUDENT', memberId },
+      });
+    } catch {
+      // unique constraint on email(phone) — leave the member without a login
+    }
   }
 
   async remove(tenantId: string, id: string) {

@@ -38,12 +38,12 @@ export default function LoginPage() {
         </div>
         <h1 className="text-xl font-serif font-semibold mb-1">Sign in</h1>
         <p className="text-sm text-gray-500 mb-6">
-          Admin, staff, and student logins all use this same page
+          Admin & staff use their email — students sign in with their phone number
         </p>
         <form onSubmit={onSubmit}>
-          <label className="block text-xs text-gray-500 mb-1">Email</label>
+          <label className="block text-xs text-gray-500 mb-1">Email or Phone Number</label>
           <input
-            type="email"
+            type="text"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required

@@ -13,6 +13,7 @@ export default function EditMemberModal({
   onSuccess: () => void;
 }) {
   const [name, setName] = useState(member.name ?? '');
+  const [phone, setPhone] = useState(member.phone ?? '');
   const [goalTag, setGoalTag] = useState(member.goalTag ?? '');
   const [plan, setPlan] = useState(member.plan ?? 'MONTHLY');
   const [batch, setBatch] = useState(member.batch ?? 'Morning');
@@ -28,6 +29,7 @@ export default function EditMemberModal({
     try {
       await api.updateMember(member.id, {
         name,
+        phone: phone || undefined,
         goalTag: goalTag || undefined,
         plan,
         batch,
@@ -56,6 +58,21 @@ export default function EditMemberModal({
               required
               className="w-full border border-black/10 rounded-lg px-3 py-2 text-sm"
             />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Phone Number</label>
+            <input
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="e.g. 9876543210"
+              className="w-full border border-black/10 rounded-lg px-3 py-2 text-sm"
+            />
+            <p className="text-[11px] text-gray-400 mt-1">
+              {member.user
+                ? 'Portal login already active for this member.'
+                : 'Adding a phone number creates their portal login (default password 1234).'}
+            </p>
           </div>
           <div>
             <label className="block text-xs text-gray-500 mb-1">Goal Tag</label>

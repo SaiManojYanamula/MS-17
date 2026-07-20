@@ -11,6 +11,7 @@ export default function AddMemberModal({
   onSuccess: () => void;
 }) {
   const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
   const [goalTag, setGoalTag] = useState('');
   const [plan, setPlan] = useState('MONTHLY');
   const [batch, setBatch] = useState('Morning');
@@ -25,6 +26,7 @@ export default function AddMemberModal({
     try {
       await api.createMember({
         name,
+        phone,
         goalTag: goalTag || undefined,
         plan,
         batch,
@@ -53,6 +55,20 @@ export default function AddMemberModal({
               required
               className="w-full border border-black/10 rounded-lg px-3 py-2 text-sm"
             />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Phone Number</label>
+            <input
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="e.g. 9876543210"
+              required
+              className="w-full border border-black/10 rounded-lg px-3 py-2 text-sm"
+            />
+            <p className="text-[11px] text-gray-400 mt-1">
+              Doubles as their portal login — default password is <span className="font-medium">1234</span>.
+            </p>
           </div>
           <div>
             <label className="block text-xs text-gray-500 mb-1">Goal Tag</label>

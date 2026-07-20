@@ -53,6 +53,17 @@ export function PaymentsIcon({ className = base }: IconProps) {
   );
 }
 
+export function ExpensesIcon({ className = base }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M3.5 6.5h13a2 2 0 0 1 2 2v9h-15a2 2 0 0 1-2-2v-9Z" />
+      <path d="M16.5 8.5h2a2 2 0 0 1 2 2v6.5h-4" />
+      <path d="M7 6.5V5a1.5 1.5 0 0 1 1.5-1.5H14" />
+      <circle cx="14.5" cy="12.5" r="1.7" />
+    </svg>
+  );
+}
+
 export function ReportsIcon({ className = base }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className={className}>

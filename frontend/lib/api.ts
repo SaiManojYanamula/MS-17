@@ -65,6 +65,7 @@ export const api = {
   },
   createMember: (data: {
     name: string;
+    phone: string;
     goalTag?: string;
     plan: string;
     batch: string;
@@ -73,6 +74,7 @@ export const api = {
   }) => request('/members', { method: 'POST', body: JSON.stringify(data) }),
   updateMember: (id: string, data: Partial<{
     name: string;
+    phone: string;
     goalTag?: string;
     plan: string;
     batch: string;
@@ -87,6 +89,8 @@ export const api = {
   assignSeat: (seatId: string, memberId: string) =>
     request(`/seating/${seatId}/assign`, { method: 'PATCH', body: JSON.stringify({ memberId }) }),
   releaseSeat: (seatId: string) => request(`/seating/${seatId}/release`, { method: 'PATCH' }),
+  createZone: (data: { name: string; startSeat: number; endSeat: number }) =>
+    request('/seating/zones', { method: 'POST', body: JSON.stringify(data) }),
 
   payments: (status?: string) => request(`/payments${status ? `?status=${status}` : ''}`),
   paymentsSummary: () => request('/payments/summary'),
@@ -94,13 +98,19 @@ export const api = {
     request('/payments', { method: 'POST', body: JSON.stringify(data) }),
   refundPayment: (id: string) => request(`/payments/${id}/refund`, { method: 'PATCH' }),
 
+  expenses: () => request('/expenses'),
+  expensesSummary: () => request('/expenses/summary'),
+  createExpense: (data: { category: string; amount: number; note?: string; receipt?: File | null }) => {
+    const formData = new FormData();
+    formData.append('category', data.category);
+    formData.append('amount', String(data.amount));
+    if (data.note) formData.append('note', data.note);
+    if (data.receipt) formData.append('receipt', data.receipt);
+    return request('/expenses', { method: 'POST', body: formData });
+  },
+
   inviteStaff: (data: { name: string; email: string; password: string; role: string; branchId?: string }) =>
     request('/auth/register', { method: 'POST', body: JSON.stringify(data) }),
-  createStudentLogin: (memberId: string, data: { name: string; email: string; password: string }) =>
-    request('/auth/register', {
-      method: 'POST',
-      body: JSON.stringify({ ...data, role: 'STUDENT', memberId }),
-    }),
 
   myTenant: () => request('/tenants/me'),
   updateTenant: (name: string) => request('/tenants/me', { method: 'PATCH', body: JSON.stringify({ name }) }),

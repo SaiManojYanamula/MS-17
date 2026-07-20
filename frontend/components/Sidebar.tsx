@@ -11,6 +11,7 @@ import {
   UsersIcon,
   SeatingIcon,
   PaymentsIcon,
+  ExpensesIcon,
   ReportsIcon,
   SettingsIcon,
   LogoutIcon,
@@ -22,6 +23,7 @@ const overviewLinks = [
   { href: '/members', label: 'Members', icon: UsersIcon },
   { href: '/seating', label: 'Seating', icon: SeatingIcon },
   { href: '/payments', label: 'Payments', icon: PaymentsIcon },
+  { href: '/expenses', label: 'Expenses', icon: ExpensesIcon },
   { href: '/reports', label: 'Reports', icon: ReportsIcon },
 ];
 
