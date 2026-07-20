@@ -1,0 +1,59 @@
+version: '3.9'
+
+services:
+  mysql:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: study_hall_saas
+      MYSQL_USER: studyhall
+      MYSQL_PASSWORD: studyhallpass
+    ports:
+      - '3307:3306'
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ['CMD', 'mysqladmin', 'ping', '-h', 'localhost']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+
+  backend:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: mysql://studyhall:studyhallpass@mysql:3306/study_hall_saas
+      JWT_SECRET: change-this-to-a-long-random-secret
+      REDIS_URL: redis://redis:6379
+      PORT: 4000
+    ports:
+      - '4000:4000'
+    volumes:
+      - backend_uploads:/app/uploads
+    command: sh -c "npx prisma migrate deploy && node dist/main"
+
+  frontend:
+    build:
+      context: ./frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:4000/api
+    ports:
+      - '3000:3000'
+
+volumes:
+  mysql_data:
+  backend_uploads:

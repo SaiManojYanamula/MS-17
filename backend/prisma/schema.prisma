@@ -1,0 +1,193 @@
+// Study Hall Management SaaS — Prisma Schema
+// Multi-tenancy model: Shared DB, row-level isolation via tenantId
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  SUPER_ADMIN
+  TENANT_OWNER
+  BRANCH_MANAGER
+  STAFF
+  STUDENT
+}
+
+enum SubscriptionPlan {
+  BASIC
+  STANDARD
+  PREMIUM
+}
+
+enum ApplicationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum SeatStatus {
+  FREE
+  OCCUPIED
+  EXPIRING_SOON
+}
+
+enum PlanType {
+  MONTHLY
+  QUARTERLY
+  DAILY_PASS
+}
+
+enum PaymentMethod {
+  UPI
+  CASH
+  CARD
+  PENDING
+}
+
+enum PaymentStatus {
+  PAID
+  PENDING
+  REFUNDED
+}
+
+model Tenant {
+  id        String   @id @default(uuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  branches Branch[]
+  users    User[]
+  members  Member[]
+}
+
+model Branch {
+  id        String   @id @default(uuid())
+  tenantId  String
+  name      String
+  address   String?
+  createdAt DateTime @default(now())
+
+  tenant       Tenant        @relation(fields: [tenantId], references: [id])
+  zones        Zone[]
+  members      Member[]
+  applications Application[]
+  payments     Payment[]
+  users        User[]
+
+  @@index([tenantId])
+}
+
+model User {
+  id        String   @id @default(uuid())
+  tenantId  String
+  branchId  String?
+  name      String
+  email     String   @unique
+  password  String
+  role      Role
+  memberId  String?  @unique // set when role is STUDENT — links the login to their Member record
+  createdAt DateTime @default(now())
+
+  tenant Tenant  @relation(fields: [tenantId], references: [id])
+  branch Branch? @relation(fields: [branchId], references: [id])
+  member Member? @relation(fields: [memberId], references: [id])
+
+  @@index([tenantId])
+}
+
+model Zone {
+  id        String @id @default(uuid())
+  tenantId  String
+  branchId  String
+  name      String // e.g. "Zone A - Window Row"
+  startSeat Int
+  endSeat   Int
+
+  branch Branch @relation(fields: [branchId], references: [id])
+  seats  Seat[]
+
+  @@index([tenantId])
+  @@index([branchId])
+}
+
+model Seat {
+  id         String     @id @default(uuid())
+  tenantId   String
+  branchId   String
+  zoneId     String
+  seatNumber Int
+  status     SeatStatus @default(FREE)
+  memberId   String?    @unique
+
+  zone   Zone    @relation(fields: [zoneId], references: [id])
+  member Member? @relation(fields: [memberId], references: [id])
+
+  @@unique([branchId, seatNumber])
+  @@index([tenantId])
+}
+
+model Member {
+  id          String    @id @default(uuid())
+  tenantId    String
+  branchId    String
+  name        String
+  goalTag     String? // e.g. "UPSC Aspirant", "NEET Aspirant"
+  plan        PlanType
+  batch       String // e.g. "Morning", "Day", "Evening"
+  expiresAt   DateTime
+  status      String    @default("Active") // Active / Expiring Soon / Expired
+  joinedAt    DateTime  @default(now())
+  aadharUrl   String? // path to uploaded Aadhar card image/PDF, carried over from Application on approval
+
+  tenant   Tenant    @relation(fields: [tenantId], references: [id])
+  branch   Branch    @relation(fields: [branchId], references: [id])
+  seat     Seat?
+  payments Payment[]
+  user     User?
+
+  @@index([tenantId])
+  @@index([branchId])
+}
+
+model Application {
+  id          String            @id @default(uuid())
+  tenantId    String
+  branchId    String
+  applicant   String
+  goalTag     String?
+  plan        PlanType
+  batch       String
+  aadharUrl   String? // path to uploaded Aadhar card image/PDF
+  appliedAt   DateTime          @default(now())
+  status      ApplicationStatus @default(PENDING)
+
+  branch Branch @relation(fields: [branchId], references: [id])
+
+  @@index([tenantId])
+  @@index([branchId])
+}
+
+model Payment {
+  id        String        @id @default(uuid())
+  tenantId  String
+  branchId  String
+  memberId  String
+  amount    Int
+  method    PaymentMethod
+  status    PaymentStatus @default(PENDING)
+  label     String // e.g. "Monthly Renewal", "Quarterly Plan", "Daily Pass"
+  createdAt DateTime      @default(now())
+
+  branch Branch @relation(fields: [branchId], references: [id])
+  member Member @relation(fields: [memberId], references: [id])
+
+  @@index([tenantId])
+  @@index([branchId])
+}
