@@ -5,17 +5,6 @@ import { PrismaService } from '../prisma.service';
 export class TenantsService {
   constructor(private prisma: PrismaService) {}
 
-  // Super Admin only — platform-wide list
-  async findAll() {
-    return this.prisma.tenant.findMany({
-      include: { branches: true, _count: { select: { members: true, users: true } } },
-    });
-  }
-
-  async create(name: string, slug: string) {
-    return this.prisma.tenant.create({ data: { name, slug } });
-  }
-
   async getMine(tenantId: string, branchId?: string) {
     const [tenant, branch] = await Promise.all([
       this.prisma.tenant.findUnique({ where: { id: tenantId } }),

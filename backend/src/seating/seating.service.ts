@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 
 @Injectable()
@@ -30,18 +30,25 @@ export class SeatingService {
     return seat;
   }
 
-  // Assign / reassign a member to a seat — enforces one active seat per member
+  // Assign / reassign a member to a seat. Editing an occupied seat to a
+  // different member frees whatever other seat that member currently holds
+  // first, so the Seat.memberId unique constraint never trips.
   async assignSeat(tenantId: string, seatId: string, memberId: string) {
     const seat = await this.prisma.seat.findFirst({ where: { id: seatId, tenantId } });
     if (!seat) throw new NotFoundException('Seat not found');
-    if (seat.status === 'OCCUPIED' && seat.memberId !== memberId) {
-      throw new BadRequestException('Seat already occupied by another member');
-    }
 
-    return this.prisma.seat.update({
-      where: { id: seatId },
-      data: { memberId, status: 'OCCUPIED' },
-    });
+    await this.prisma.$transaction([
+      this.prisma.seat.updateMany({
+        where: { tenantId, memberId, NOT: { id: seatId } },
+        data: { memberId: null, status: 'FREE' },
+      }),
+      this.prisma.seat.update({
+        where: { id: seatId },
+        data: { memberId, status: 'OCCUPIED' },
+      }),
+    ]);
+
+    return this.prisma.seat.findFirst({ where: { id: seatId }, include: { member: true, zone: true } });
   }
 
   async releaseSeat(tenantId: string, seatId: string) {

@@ -5,11 +5,11 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        sidebar: '#241d1b',
-        navy: '#241d1b',
+        sidebar: '#0d9488',
+        navy: '#0d9488',
         cream: '#f4f6f9',
         card: '#ffffff',
-        accent: '#7c2d43',
+        accent: '#0d9488',
         free: '#15803d',
         occupied: '#d97706',
         expiring: '#dc2626',

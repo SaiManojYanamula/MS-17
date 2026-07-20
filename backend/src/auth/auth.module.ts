@@ -8,5 +8,6 @@ import { MembersModule } from '../members/members.module';
   imports: [MembersModule],
   controllers: [AuthController],
   providers: [AuthService, PrismaService],
+  exports: [AuthService],
 })
 export class AuthModule {}

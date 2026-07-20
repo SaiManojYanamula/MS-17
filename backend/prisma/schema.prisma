@@ -55,12 +55,20 @@ enum PaymentStatus {
   REFUNDED
 }
 
+enum TenantStatus {
+  ACTIVE
+  SUSPENDED
+  TRIAL
+}
+
 model Tenant {
-  id        String   @id @default(uuid())
+  id        String           @id @default(uuid())
   name      String
-  slug      String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  slug      String           @unique
+  status    TenantStatus     @default(ACTIVE)
+  plan      SubscriptionPlan @default(BASIC)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
 
   branches Branch[]
   users    User[]
@@ -86,16 +94,17 @@ model Branch {
 
 model User {
   id        String   @id @default(uuid())
-  tenantId  String
+  tenantId  String? // null for SUPER_ADMIN — the only role not scoped to one tenant
   branchId  String?
   name      String
   email     String   @unique
   password  String
   role      Role
+  isActive  Boolean  @default(true)
   memberId  String?  @unique // set when role is STUDENT — links the login to their Member record
   createdAt DateTime @default(now())
 
-  tenant Tenant  @relation(fields: [tenantId], references: [id])
+  tenant Tenant? @relation(fields: [tenantId], references: [id])
   branch Branch? @relation(fields: [branchId], references: [id])
   member Member? @relation(fields: [memberId], references: [id])
 

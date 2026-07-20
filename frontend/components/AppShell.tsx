@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Sidebar from './Sidebar';
+import SuperAdminSidebar from './SuperAdminSidebar';
 import PortalHeader from './PortalHeader';
 import { useAuth } from '@/lib/auth';
 
@@ -11,8 +12,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const isStudent = user?.role === 'STUDENT';
-  const homeRoute = isStudent ? '/portal' : '/dashboard';
+  const isSuperAdmin = user?.role === 'SUPER_ADMIN';
+  const homeRoute = isStudent ? '/portal' : isSuperAdmin ? '/super-admin' : '/dashboard';
   const isPublicRoute = pathname === '/login' || pathname.startsWith('/apply');
+  const inSuperAdminArea = pathname === '/super-admin' || pathname.startsWith('/super-admin/');
 
   useEffect(() => {
     if (loading) return;
@@ -24,8 +27,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       router.replace('/portal');
     } else if (user && !isStudent && pathname === '/portal') {
       router.replace('/dashboard');
+    } else if (user && isSuperAdmin && !inSuperAdminArea) {
+      router.replace('/super-admin');
+    } else if (user && !isSuperAdmin && inSuperAdminArea) {
+      router.replace(homeRoute);
     }
-  }, [loading, user, isStudent, homeRoute, pathname, router]);
+  }, [loading, user, isStudent, isSuperAdmin, inSuperAdminArea, homeRoute, pathname, router]);
 
   if (loading) return null;
 
@@ -38,6 +45,15 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <div className="text-gray-900">
         <PortalHeader />
         <main className="max-w-2xl mx-auto p-8">{children}</main>
+      </div>
+    );
+  }
+
+  if (isSuperAdmin) {
+    return (
+      <div className="flex text-gray-900">
+        <SuperAdminSidebar />
+        <main className="flex-1 p-8">{children}</main>
       </div>
     );
   }

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { BarChart, Bar, XAxis, Tooltip, Cell, ResponsiveContainer } from 'recharts';
 import TopBar from '@/components/TopBar';
 import StatCard from '@/components/StatCard';
 import AddMemberModal from '@/components/AddMemberModal';
@@ -13,8 +14,21 @@ import {
   mockPendingApplications,
   mockRecentActivity,
   mockRevenueTrend,
-  seatStatus,
 } from '@/lib/mockData';
+
+const CHART_ACCENT = '#0d9488';
+const CHART_HIGHLIGHT = '#0f172a';
+const CHART_MUTED = '#898781';
+
+function RevenueTooltip({ active, payload, label }: any) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="bg-white rounded-lg border border-black/10 shadow-lg px-3 py-2 text-xs">
+      <div className="text-gray-400 mb-0.5">{label}</div>
+      <div className="font-medium">₹{payload[0].value.toLocaleString('en-IN')}</div>
+    </div>
+  );
+}
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -36,7 +50,6 @@ export default function DashboardPage() {
     refetch();
   }, []);
 
-  const maxRevenue = Math.max(...revenue.map((r: any) => r.total));
   const firstName = user?.name?.split(' ')[0] ?? '';
 
   return (
@@ -139,47 +152,31 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
-        <div className="col-span-2 bg-card rounded-xl p-5 border border-black/5">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="font-serif font-semibold">Seating Overview</h2>
-            <Link href="/seating" className="text-xs text-accent font-medium">
-              MANAGE
-            </Link>
-          </div>
-          <div className="flex gap-4 text-xs mb-3">
-            <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-free inline-block" /> Free</span>
-            <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-occupied inline-block" /> Occupied</span>
-            <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-expiring inline-block" /> Expiring Soon</span>
-          </div>
-          <div className="grid grid-cols-10 gap-1.5">
-            {Array.from({ length: 50 }, (_, i) => i + 1).map((n) => {
-              const s = seatStatus(n);
-              const color = s === 'FREE' ? 'bg-free' : s === 'EXPIRING_SOON' ? 'bg-expiring' : 'bg-occupied';
-              return <div key={n} className={`aspect-square rounded ${color}`} />;
-            })}
-          </div>
+      <div className="bg-card rounded-xl p-5 border border-black/5">
+        <div className="flex items-center justify-between mb-1">
+          <h2 className="font-serif font-semibold">Revenue — Last 6 Months</h2>
         </div>
-
-        <div className="bg-card rounded-xl p-5 border border-black/5">
-          <div className="flex items-center justify-between mb-1">
-            <h2 className="font-serif font-semibold">Revenue — Last 6 Months</h2>
-          </div>
-          <div className="text-xl font-serif font-semibold mb-3">
-            ₹{stats.revenueThisMonth.toLocaleString('en-IN')}
-            <span className="text-xs text-free ml-2 font-sans">+{stats.revenueChangePct}% vs last</span>
-          </div>
-          <div className="flex items-end gap-2 h-24">
-            {revenue.map((r: any, i: number) => (
-              <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                <div
-                  className={`w-full rounded-t ${i === revenue.length - 1 ? 'bg-sidebar' : 'bg-accent'}`}
-                  style={{ height: `${(r.total / maxRevenue) * 80}px` }}
-                />
-                <span className="text-[10px] text-gray-400">{r.month}</span>
-              </div>
-            ))}
-          </div>
+        <div className="text-xl font-serif font-semibold mb-3">
+          ₹{stats.revenueThisMonth.toLocaleString('en-IN')}
+          <span className="text-xs text-free ml-2 font-sans">+{stats.revenueChangePct}% vs last</span>
+        </div>
+        <div className="h-32">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={revenue} margin={{ top: 4, right: 4, left: 4, bottom: 0 }}>
+              <XAxis
+                dataKey="month"
+                axisLine={false}
+                tickLine={false}
+                tick={{ fontSize: 10, fill: CHART_MUTED }}
+              />
+              <Tooltip content={<RevenueTooltip />} cursor={{ fill: 'rgba(13,148,136,0.06)' }} />
+              <Bar dataKey="total" radius={[4, 4, 0, 0]} maxBarSize={40}>
+                {revenue.map((r: any, i: number) => (
+                  <Cell key={i} fill={i === revenue.length - 1 ? CHART_HIGHLIGHT : CHART_ACCENT} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
         </div>
       </div>
 

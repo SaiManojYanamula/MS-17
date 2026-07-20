@@ -14,6 +14,7 @@ export default function SettingsPage() {
   const [branchId, setBranchId] = useState<string | null>(null);
   const [notifyExpiry, setNotifyExpiry] = useState(true);
   const [notifyPayments, setNotifyPayments] = useState(true);
+  const [notifyWhatsapp, setNotifyWhatsapp] = useState(false);
   const [profileError, setProfileError] = useState('');
   const [profileSaved, setProfileSaved] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
@@ -271,6 +272,17 @@ export default function SettingsPage() {
                 type="checkbox"
                 checked={notifyPayments}
                 onChange={(e) => setNotifyPayments(e.target.checked)}
+              />
+            </label>
+            <label className="flex items-center justify-between">
+              <span>
+                WhatsApp notifications
+                <span className="block text-[11px] text-gray-400">Sends expiry & payment alerts via WhatsApp</span>
+              </span>
+              <input
+                type="checkbox"
+                checked={notifyWhatsapp}
+                onChange={(e) => setNotifyWhatsapp(e.target.checked)}
               />
             </label>
           </div>

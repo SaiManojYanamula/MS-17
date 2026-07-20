@@ -106,4 +106,35 @@ export const api = {
   updateTenant: (name: string) => request('/tenants/me', { method: 'PATCH', body: JSON.stringify({ name }) }),
   updateBranch: (branchId: string, data: { name?: string; address?: string }) =>
     request(`/tenants/branches/${branchId}`, { method: 'PATCH', body: JSON.stringify(data) }),
+
+  // Super Admin — platform-wide, cross-tenant
+  organizations: () => request('/super-admin/organizations'),
+  createOrganization: (data: {
+    name: string;
+    slug: string;
+    branchName?: string;
+    ownerName: string;
+    ownerEmail: string;
+    ownerPassword: string;
+  }) => request('/super-admin/organizations', { method: 'POST', body: JSON.stringify(data) }),
+  updateOrganization: (id: string, data: { name?: string; plan?: string; status?: string }) =>
+    request(`/super-admin/organizations/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+
+  superAdminBranches: () => request('/super-admin/branches'),
+  createSuperAdminBranch: (data: { tenantId: string; name: string; address?: string }) =>
+    request('/super-admin/branches', { method: 'POST', body: JSON.stringify(data) }),
+  updateSuperAdminBranch: (id: string, data: { name?: string; address?: string }) =>
+    request(`/super-admin/branches/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+
+  platformUsers: () => request('/super-admin/users'),
+  createPlatformUser: (data: {
+    tenantId: string;
+    branchId?: string;
+    name: string;
+    email: string;
+    password: string;
+    role: string;
+  }) => request('/super-admin/users', { method: 'POST', body: JSON.stringify(data) }),
+  updatePlatformUser: (id: string, data: { role?: string; isActive?: boolean }) =>
+    request(`/super-admin/users/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
 };

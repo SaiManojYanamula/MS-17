@@ -15,6 +15,7 @@ export default function SeatingPage() {
   const [members, setMembers] = useState<any[]>([]);
   const [selectedSeatId, setSelectedSeatId] = useState<string | null>(null);
   const [seat, setSeat] = useState<any>(null);
+  const [editing, setEditing] = useState(false);
   const [assignMemberId, setAssignMemberId] = useState('');
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('UPI');
@@ -31,6 +32,8 @@ export default function SeatingPage() {
   }, []);
 
   useEffect(() => {
+    setEditing(false);
+    setAssignMemberId('');
     if (!selectedSeatId) {
       setSeat(null);
       return;
@@ -61,6 +64,7 @@ export default function SeatingPage() {
       setAssignMemberId('');
       setPaymentAmount('');
       setPaymentMethod('UPI');
+      setEditing(false);
     } catch (err: any) {
       setError(err.message || 'Could not assign seat');
     } finally {
@@ -159,7 +163,7 @@ export default function SeatingPage() {
 
               {error && <p className="text-xs text-expiring mb-3">{error}</p>}
 
-              {canManage && seat.status !== 'FREE' && (
+              {canManage && seat.status !== 'FREE' && !editing && (
                 <>
                   <Link
                     href={`/members?highlight=${seat.memberId}`}
@@ -168,6 +172,12 @@ export default function SeatingPage() {
                     View Member Profile
                   </Link>
                   <button
+                    onClick={() => setEditing(true)}
+                    className="w-full border border-black/10 text-sm py-2.5 rounded-lg mb-2"
+                  >
+                    Edit / Reassign Seat
+                  </button>
+                  <button
                     onClick={release}
                     disabled={busy}
                     className="w-full border border-black/10 text-sm py-2.5 rounded-lg disabled:opacity-60"
@@ -175,6 +185,42 @@ export default function SeatingPage() {
                     {busy ? 'Releasing…' : 'Release Seat'}
                   </button>
                 </>
+              )}
+
+              {canManage && seat.status !== 'FREE' && editing && (
+                <div className="space-y-2">
+                  <label className="block text-xs text-gray-500 mb-1">Reassign to</label>
+                  <select
+                    value={assignMemberId}
+                    onChange={(e) => setAssignMemberId(e.target.value)}
+                    className="w-full border border-black/10 rounded-lg px-3 py-2 text-sm"
+                  >
+                    <option value="">Select a member…</option>
+                    {members.map((m: any) => (
+                      <option key={m.id} value={m.id}>
+                        {m.name}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="flex gap-2 pt-1">
+                    <button
+                      onClick={() => {
+                        setEditing(false);
+                        setAssignMemberId('');
+                      }}
+                      className="flex-1 border border-black/10 text-sm py-2.5 rounded-lg"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={assign}
+                      disabled={busy || !assignMemberId}
+                      className="flex-1 bg-sidebar text-white text-sm py-2.5 rounded-lg font-medium disabled:opacity-60"
+                    >
+                      {busy ? 'Saving…' : 'Save'}
+                    </button>
+                  </div>
+                </div>
               )}
 
               {canManage && seat.status === 'FREE' && (

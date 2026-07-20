@@ -8,7 +8,7 @@ export type AuthUser = {
   name: string;
   email: string;
   role: string;
-  tenantId: string;
+  tenantId: string | null;
   branchId?: string | null;
   memberId?: string | null;
 };

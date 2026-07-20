@@ -7,18 +7,6 @@ import { TenantRequest } from '../common/middleware/tenant.middleware';
 export class TenantsController {
   constructor(private tenantsService: TenantsService) {}
 
-  @Get()
-  @Roles('SUPER_ADMIN')
-  findAll() {
-    return this.tenantsService.findAll();
-  }
-
-  @Post()
-  @Roles('SUPER_ADMIN')
-  create(@Body() body: { name: string; slug: string }) {
-    return this.tenantsService.create(body.name, body.slug);
-  }
-
   // Settings page profile card — the caller's own tenant/branch.
   @Get('me')
   getMine(@Req() req: TenantRequest) {
