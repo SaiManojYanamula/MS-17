@@ -26,7 +26,7 @@ export default function OrganizationsPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <div>
           <h1 className="text-2xl font-serif font-semibold">Organizations</h1>
           <p className="text-sm text-gray-500">{orgs.length} study halls on the platform</p>
@@ -35,7 +35,7 @@ export default function OrganizationsPage() {
           <TopBar placeholder="Search organizations..." value={search} onChange={setSearch} />
           <button
             onClick={() => setShowAdd(true)}
-            className="bg-sidebar text-white text-sm px-4 py-2 rounded-lg"
+            className="bg-sidebar text-white text-sm px-4 py-2 rounded-lg shrink-0"
           >
             + New Organization
           </button>
@@ -44,8 +44,8 @@ export default function OrganizationsPage() {
 
       {error && <p className="text-xs text-expiring mb-3">{error}</p>}
 
-      <div className="bg-card rounded-xl border border-black/5 overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="bg-card rounded-xl border border-black/5 overflow-x-auto">
+        <table className="w-full text-sm min-w-[800px]">
           <thead>
             <tr className="text-left text-[10px] text-gray-400 tracking-wide border-b border-black/5">
               <th className="p-4 font-normal">ORGANIZATION</th>

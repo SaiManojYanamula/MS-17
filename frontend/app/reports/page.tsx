@@ -71,7 +71,7 @@ export default function ReportsPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <div>
           <h1 className="text-2xl font-serif font-semibold">Reports &amp; Analytics</h1>
           <p className="text-sm text-gray-500">Occupancy, revenue, and membership trends</p>
@@ -79,7 +79,7 @@ export default function ReportsPage() {
         <TopBar />
       </div>
 
-      <div className="grid grid-cols-2 gap-4 mb-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
         <div className="bg-card rounded-xl p-5 border border-black/5">
           <h2 className="font-serif font-semibold mb-4">Occupancy Trend — Last 8 Weeks</h2>
           <div className="h-40">
@@ -141,7 +141,7 @@ export default function ReportsPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="bg-card rounded-xl p-5 border border-black/5">
           <h2 className="font-serif font-semibold mb-4">Revenue — Last 6 Months</h2>
           <div className="h-40">

@@ -14,6 +14,8 @@ import {
   ExpensesIcon,
   ReportsIcon,
   SettingsIcon,
+  BellIcon,
+  RequestIcon,
   LogoutIcon,
 } from './icons';
 
@@ -24,28 +26,39 @@ const overviewLinks = [
   { href: '/seating', label: 'Seating', icon: SeatingIcon },
   { href: '/payments', label: 'Payments', icon: PaymentsIcon },
   { href: '/expenses', label: 'Expenses', icon: ExpensesIcon },
+  { href: '/portal/notices', label: 'Notices', icon: BellIcon },
+  { href: '/portal/requests', label: 'Requests', icon: RequestIcon, badgeKey: 'requests' },
   { href: '/reports', label: 'Reports', icon: ReportsIcon },
 ];
 
 const systemLinks = [{ href: '/settings', label: 'Settings', icon: SettingsIcon, roles: ['TENANT_OWNER'] }];
 
-export default function Sidebar() {
+export default function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: () => void }) {
   const pathname = usePathname();
   const { user, logout } = useAuth();
   const [pendingCount, setPendingCount] = useState(0);
+  const [openRequestCount, setOpenRequestCount] = useState(0);
 
   useEffect(() => {
     if (!user) return;
     api.applications('PENDING').then((apps) => setPendingCount(apps.length ?? 0)).catch(() => {});
+    api
+      .allRequests()
+      .then((reqs) => setOpenRequestCount((reqs ?? []).filter((r: any) => r.status === 'OPEN').length))
+      .catch(() => {});
   }, [user]);
+
+  const badgeCounts: Record<string, number> = { pending: pendingCount, requests: openRequestCount };
 
   const renderLink = (link: (typeof overviewLinks)[number]) => {
     const active = pathname === link.href;
     const Icon = link.icon;
+    const count = link.badgeKey ? badgeCounts[link.badgeKey] ?? 0 : 0;
     return (
       <Link
         key={link.href}
         href={link.href}
+        onClick={onClose}
         className={`flex items-center justify-between px-3.5 py-2.5 rounded-lg text-sm mb-1 border-l-2 transition-colors ${
           active
             ? 'bg-accent/10 text-accent font-medium border-accent'
@@ -56,9 +69,9 @@ export default function Sidebar() {
           <Icon />
           {link.label}
         </span>
-        {link.badgeKey && pendingCount > 0 && (
+        {count > 0 && (
           <span className="text-xs rounded-full px-1.5 py-0.5 bg-accent/15 text-accent">
-            {pendingCount}
+            {count}
           </span>
         )}
       </Link>
@@ -72,7 +85,15 @@ export default function Sidebar() {
     : '?';
 
   return (
-    <aside className="w-60 bg-white text-gray-700 border-r border-black/5 flex flex-col h-screen sticky top-0 px-3 py-5">
+    <>
+      {open && (
+        <div onClick={onClose} className="fixed inset-0 bg-black/40 z-30 md:hidden" />
+      )}
+      <aside
+        className={`w-60 bg-white text-gray-700 border-r border-black/5 flex flex-col h-screen fixed md:sticky top-0 left-0 z-40 px-3 py-5 transition-transform duration-200 md:translate-x-0 ${
+          open ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
       <div className="flex items-center gap-2 px-2 mb-8">
         <div className="w-8 h-8 rounded-full bg-accent" />
         <div>
@@ -108,6 +129,7 @@ export default function Sidebar() {
           <LogoutIcon /> Log out
         </button>
       </div>
-    </aside>
+      </aside>
+    </>
   );
 }

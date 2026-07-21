@@ -9,7 +9,11 @@ export class ReportsService {
   async dashboardStats(tenantId: string) {
     const [activeMembers, totalSeats, occupiedSeats, pendingApplications, revenueThisMonth] =
       await Promise.all([
-        this.prisma.member.count({ where: { tenantId, status: 'Active' } }),
+        // "Active" = not expired and not within the 7-day expiring-soon window —
+        // derived from expiresAt, never from the stale stored status column.
+        this.prisma.member.count({
+          where: { tenantId, expiresAt: { gt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) } },
+        }),
         this.prisma.seat.count({ where: { tenantId } }),
         this.prisma.seat.count({ where: { tenantId, status: 'OCCUPIED' } }),
         this.prisma.application.count({ where: { tenantId, status: 'PENDING' } }),
@@ -149,7 +153,7 @@ export class ReportsService {
     const mostCommonGoal = Object.entries(goalCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? '-';
 
     const expiredCount = await this.prisma.member.count({
-      where: { tenantId, status: 'Expired' },
+      where: { tenantId, expiresAt: { lt: new Date() } },
     });
     const renewalRate = totalMembersAllTime > 0
       ? Math.round(((totalMembersAllTime - expiredCount) / totalMembersAllTime) * 100)

@@ -3,6 +3,15 @@
 import { useState } from 'react';
 import { api } from '@/lib/api';
 
+function computeExpiry(plan: string, from: string): string {
+  if (!from) return '';
+  const d = new Date(from);
+  if (plan === 'MONTHLY') d.setMonth(d.getMonth() + 1);
+  else if (plan === 'QUARTERLY') d.setMonth(d.getMonth() + 3);
+  else d.setDate(d.getDate() + 1); // DAILY_PASS
+  return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
 export default function AddMemberModal({
   onClose,
   onSuccess,
@@ -15,7 +24,7 @@ export default function AddMemberModal({
   const [goalTag, setGoalTag] = useState('');
   const [plan, setPlan] = useState('MONTHLY');
   const [batch, setBatch] = useState('Morning');
-  const [expiresAt, setExpiresAt] = useState('');
+  const [joinedAt, setJoinedAt] = useState(() => new Date().toISOString().slice(0, 10));
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -30,8 +39,7 @@ export default function AddMemberModal({
         goalTag: goalTag || undefined,
         plan,
         batch,
-        expiresAt: new Date(expiresAt).toISOString(),
-        status: 'Active',
+        joinedAt: new Date(joinedAt).toISOString(),
       });
       onSuccess();
       onClose();
@@ -43,7 +51,7 @@ export default function AddMemberModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl p-6 w-full max-w-sm border border-black/5">
         <h2 className="font-serif font-semibold text-lg mb-4">Add Member</h2>
         <form onSubmit={submit} className="space-y-3">
@@ -106,14 +114,17 @@ export default function AddMemberModal({
             </div>
           </div>
           <div>
-            <label className="block text-xs text-gray-500 mb-1">Expires On</label>
+            <label className="block text-xs text-gray-500 mb-1">Joining Date</label>
             <input
               type="date"
-              value={expiresAt}
-              onChange={(e) => setExpiresAt(e.target.value)}
+              value={joinedAt}
+              onChange={(e) => setJoinedAt(e.target.value)}
               required
               className="w-full border border-black/10 rounded-lg px-3 py-2 text-sm"
             />
+            <p className="text-[11px] text-gray-400 mt-1">
+              Expires on <span className="font-medium text-gray-600">{computeExpiry(plan, joinedAt) || '—'}</span> (auto-calculated from joining date + plan)
+            </p>
           </div>
           {error && <p className="text-xs text-expiring">{error}</p>}
           <div className="flex gap-2 pt-2">

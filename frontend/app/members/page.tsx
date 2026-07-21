@@ -60,7 +60,7 @@ export default function MembersPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <div>
           <h1 className="text-2xl font-serif font-semibold">Members</h1>
           <p className="text-sm text-gray-500">{counts.all} active members across 3 batches</p>
@@ -69,14 +69,14 @@ export default function MembersPage() {
           <TopBar value={search} onChange={setSearch} />
           <button
             onClick={() => setShowAdd(true)}
-            className="bg-sidebar text-white text-sm px-4 py-2 rounded-lg shadow-sm shadow-accent/20"
+            className="bg-sidebar text-white text-sm px-4 py-2 rounded-lg shadow-sm shadow-accent/20 shrink-0"
           >
             + Add Member
           </button>
         </div>
       </div>
 
-      <div className="flex gap-6 border-b border-black/10 mb-6 text-sm">
+      <div className="flex gap-6 border-b border-black/10 mb-6 text-sm overflow-x-auto">
         {tabs.map((t) => (
           <button
             key={t.key}
@@ -99,7 +99,7 @@ export default function MembersPage() {
 
       {error && <p className="text-xs text-expiring mb-3">{error}</p>}
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {members.map((m: any) => (
           <div
             key={m.id}
@@ -117,7 +117,7 @@ export default function MembersPage() {
                   <div className="text-xs text-gray-400">{m.goalTag}</div>
                 </div>
               </div>
-              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                 <button
                   onClick={() => setEditingMember(m)}
                   title="Edit"

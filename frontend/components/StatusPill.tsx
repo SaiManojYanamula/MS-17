@@ -1,6 +1,6 @@
 const styles: Record<string, string> = {
   Active: 'text-free',
-  'Expiring Soon': 'text-accent',
+  'Expiring Soon': 'text-expiring',
   Expired: 'text-gray-400',
   PENDING: 'bg-accent/20 text-accent',
   PAID: 'bg-free/20 text-free',
@@ -12,7 +12,7 @@ export default function StatusPill({ status }: { status: string }) {
 
   if (isDot) {
     const dotColor =
-      status === 'Active' ? 'bg-free' : status === 'Expiring Soon' ? 'bg-accent' : 'bg-gray-400';
+      status === 'Active' ? 'bg-free' : status === 'Expiring Soon' ? 'bg-expiring' : 'bg-gray-400';
     return (
       <span className={`flex items-center gap-1.5 text-xs font-medium ${styles[status]}`}>
         <span className={`w-1.5 h-1.5 rounded-full ${dotColor}`} />

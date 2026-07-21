@@ -54,7 +54,7 @@ export default function DashboardPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <div>
           <h1 className="text-2xl font-serif font-semibold">Good morning{firstName ? `, ${firstName}` : ''}</h1>
           <p className="text-sm text-gray-500">Room status: Open</p>
@@ -63,14 +63,14 @@ export default function DashboardPage() {
           <TopBar />
           <button
             onClick={() => setShowAddMember(true)}
-            className="bg-sidebar text-white text-sm px-4 py-2 rounded-lg"
+            className="bg-sidebar text-white text-sm px-4 py-2 rounded-lg shrink-0"
           >
             + New Member
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <StatCard icon="👤" value={String(stats.activeMembers)} label="Active Members" />
         <StatCard
           icon="🪑"
@@ -92,15 +92,15 @@ export default function DashboardPage() {
         />
       </div>
 
-      <div className="grid grid-cols-3 gap-4 mb-6">
-        <div className="col-span-2 bg-card rounded-xl p-5 border border-black/5">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+        <div className="lg:col-span-2 bg-card rounded-xl p-5 border border-black/5 overflow-x-auto">
           <div className="flex items-center justify-between mb-3">
             <h2 className="font-serif font-semibold">Pending Applications</h2>
             <Link href="/applications" className="text-xs text-accent font-medium">
               VIEW ALL
             </Link>
           </div>
-          <table className="w-full text-sm">
+          <table className="w-full text-sm min-w-[500px]">
             <thead>
               <tr className="text-left text-[10px] text-gray-400 tracking-wide">
                 <th className="pb-2 font-normal">APPLICANT</th>

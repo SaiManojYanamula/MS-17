@@ -31,3 +31,28 @@ export function memberNameOf(member: any): string {
   if (member == null) return '—';
   return typeof member === 'object' ? member.name ?? '—' : member;
 }
+
+const PLAN_TOTAL_DAYS: Record<string, number> = {
+  MONTHLY: 30,
+  QUARTERLY: 90,
+  DAILY_PASS: 1,
+};
+
+// Days used / total days in the current plan cycle, derived from expiresAt
+// (no separate "cycle start" field exists — this approximates from the plan length).
+export function planProgress(plan?: string | null, expiresAt?: string | null) {
+  const totalDays = PLAN_TOTAL_DAYS[plan ?? ''] ?? 30;
+  const daysRemaining = expiresAt
+    ? Math.max(0, Math.ceil((new Date(expiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+    : totalDays;
+  const daysUsed = Math.max(0, Math.min(totalDays, totalDays - daysRemaining));
+  return { daysUsed, totalDays, pct: Math.min(100, (daysUsed / totalDays) * 100) };
+}
+
+export function latestPaymentAmount(payments?: any[]): number | null {
+  if (!payments || payments.length === 0) return null;
+  const sorted = [...payments].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+  );
+  return sorted[0].amount;
+}

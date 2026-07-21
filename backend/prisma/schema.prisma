@@ -61,6 +61,24 @@ enum TenantStatus {
   TRIAL
 }
 
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  HOLIDAY
+}
+
+enum RequestType {
+  RENEWAL
+  SEAT_CHANGE
+  ISSUE
+  OTHER
+}
+
+enum RequestStatus {
+  OPEN
+  RESOLVED
+}
+
 model Tenant {
   id        String           @id @default(uuid())
   name      String
@@ -89,6 +107,9 @@ model Branch {
   payments     Payment[]
   users        User[]
   expenses     Expense[]
+  attendance   Attendance[]
+  notices      Notice[]
+  requests     Request[]
 
   @@index([tenantId])
 }
@@ -147,6 +168,7 @@ model Member {
   id          String    @id @default(uuid())
   tenantId    String
   branchId    String
+  displayId   String?   @unique // e.g. "AKR-2214" — shown to the student as their Student ID
   name        String
   phone       String? // also used as the login username for their auto-created STUDENT account
   goalTag     String? // e.g. "UPSC Aspirant", "NEET Aspirant"
@@ -157,11 +179,13 @@ model Member {
   joinedAt    DateTime  @default(now())
   aadharUrl   String? // path to uploaded Aadhar card image/PDF, carried over from Application on approval
 
-  tenant   Tenant    @relation(fields: [tenantId], references: [id])
-  branch   Branch    @relation(fields: [branchId], references: [id])
-  seat     Seat?
-  payments Payment[]
-  user     User?
+  tenant     Tenant       @relation(fields: [tenantId], references: [id])
+  branch     Branch       @relation(fields: [branchId], references: [id])
+  seat       Seat?
+  payments   Payment[]
+  user       User?
+  attendance Attendance[]
+  requests   Request[]
 
   @@index([tenantId])
   @@index([branchId])
@@ -214,6 +238,54 @@ model Expense {
   createdAt  DateTime @default(now())
 
   branch Branch @relation(fields: [branchId], references: [id])
+
+  @@index([tenantId])
+  @@index([branchId])
+}
+
+model Attendance {
+  id        String           @id @default(uuid())
+  tenantId  String
+  branchId  String
+  memberId  String
+  date      DateTime         @db.Date
+  status    AttendanceStatus
+  createdAt DateTime         @default(now())
+
+  branch Branch @relation(fields: [branchId], references: [id])
+  member Member @relation(fields: [memberId], references: [id])
+
+  @@unique([memberId, date])
+  @@index([tenantId])
+  @@index([branchId])
+}
+
+model Notice {
+  id        String   @id @default(uuid())
+  tenantId  String
+  branchId  String
+  title     String
+  body      String
+  createdAt DateTime @default(now())
+
+  branch Branch @relation(fields: [branchId], references: [id])
+
+  @@index([tenantId])
+  @@index([branchId])
+}
+
+model Request {
+  id        String        @id @default(uuid())
+  tenantId  String
+  branchId  String
+  memberId  String
+  type      RequestType
+  message   String
+  status    RequestStatus @default(OPEN)
+  createdAt DateTime      @default(now())
+
+  branch Branch @relation(fields: [branchId], references: [id])
+  member Member @relation(fields: [memberId], references: [id])
 
   @@index([tenantId])
   @@index([branchId])

@@ -37,7 +37,7 @@ export default function SubscriptionsPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <div>
           <h1 className="text-2xl font-serif font-semibold">Subscription & Plans</h1>
           <p className="text-sm text-gray-500">Plan and billing status per organization</p>
@@ -47,7 +47,7 @@ export default function SubscriptionsPage() {
 
       {error && <p className="text-xs text-expiring mb-3">{error}</p>}
 
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         {plans.map((p) => (
           <div key={p} className="bg-card rounded-xl p-4 border border-black/5">
             <div className="text-2xl font-serif font-semibold">{byPlan(p)}</div>
@@ -56,8 +56,8 @@ export default function SubscriptionsPage() {
         ))}
       </div>
 
-      <div className="bg-card rounded-xl border border-black/5 overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="bg-card rounded-xl border border-black/5 overflow-x-auto">
+        <table className="w-full text-sm min-w-[400px]">
           <thead>
             <tr className="text-left text-[10px] text-gray-400 tracking-wide border-b border-black/5">
               <th className="p-4 font-normal">ORGANIZATION</th>

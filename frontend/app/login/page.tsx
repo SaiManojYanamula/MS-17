@@ -27,7 +27,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-sidebar">
+    <div className="min-h-screen flex items-center justify-center bg-sidebar px-4">
       <div className="bg-card rounded-xl p-8 w-full max-w-sm border border-black/5">
         <div className="flex items-center gap-2 mb-6">
           <div className="w-8 h-8 rounded-full bg-accent" />

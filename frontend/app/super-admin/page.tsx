@@ -23,7 +23,7 @@ export default function SuperAdminDashboardPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <div>
           <h1 className="text-2xl font-serif font-semibold">Platform Overview{user?.name ? `, ${user.name}` : ''}</h1>
           <p className="text-sm text-gray-500">Every organization on the platform, at a glance</p>
@@ -33,7 +33,7 @@ export default function SuperAdminDashboardPage() {
 
       {error && <p className="text-xs text-expiring mb-3">{error}</p>}
 
-      <div className="grid grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <StatCard icon="⌂" value={String(orgs.length)} label="Organizations" />
         <StatCard icon="▥" value={String(totalBranches)} label="Branches" />
         <StatCard icon="☺" value={String(totalUsers)} label="Staff Users" />
@@ -45,14 +45,14 @@ export default function SuperAdminDashboardPage() {
         />
       </div>
 
-      <div className="bg-card rounded-xl p-5 border border-black/5">
+      <div className="bg-card rounded-xl p-5 border border-black/5 overflow-x-auto">
         <div className="flex items-center justify-between mb-3">
           <h2 className="font-serif font-semibold">Recent Organizations</h2>
           <Link href="/super-admin/organizations" className="text-xs text-accent font-medium">
             VIEW ALL
           </Link>
         </div>
-        <table className="w-full text-sm">
+        <table className="w-full text-sm min-w-[500px]">
           <thead>
             <tr className="text-left text-[10px] text-gray-400 tracking-wide">
               <th className="pb-2 font-normal">ORGANIZATION</th>

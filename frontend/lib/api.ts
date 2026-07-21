@@ -69,8 +69,7 @@ export const api = {
     goalTag?: string;
     plan: string;
     batch: string;
-    expiresAt: string;
-    status?: string;
+    joinedAt: string;
   }) => request('/members', { method: 'POST', body: JSON.stringify(data) }),
   updateMember: (id: string, data: Partial<{
     name: string;
@@ -79,7 +78,6 @@ export const api = {
     plan: string;
     batch: string;
     expiresAt: string;
-    status: string;
   }>) => request(`/members/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
   deleteMember: (id: string) => request(`/members/${id}`, { method: 'DELETE' }),
   myMember: () => request('/members/me'),
@@ -147,4 +145,23 @@ export const api = {
   }) => request('/super-admin/users', { method: 'POST', body: JSON.stringify(data) }),
   updatePlatformUser: (id: string, data: { role?: string; isActive?: boolean }) =>
     request(`/super-admin/users/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+
+  // Attendance
+  myAttendance: () => request('/attendance/me'),
+  staffAttendance: (date: string) => request(`/attendance?date=${date}`),
+  markAttendance: (memberId: string, date: string, status: string) =>
+    request('/attendance', { method: 'POST', body: JSON.stringify({ memberId, date, status }) }),
+
+  // Notices
+  notices: () => request('/notices'),
+  postNotice: (data: { title: string; body: string }) =>
+    request('/notices', { method: 'POST', body: JSON.stringify(data) }),
+  deleteNotice: (id: string) => request(`/notices/${id}`, { method: 'DELETE' }),
+
+  // Requests
+  myRequests: () => request('/requests/me'),
+  createRequest: (data: { type: string; message: string }) =>
+    request('/requests', { method: 'POST', body: JSON.stringify(data) }),
+  allRequests: () => request('/requests'),
+  resolveRequest: (id: string) => request(`/requests/${id}/resolve`, { method: 'PATCH' }),
 };

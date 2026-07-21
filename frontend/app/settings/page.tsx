@@ -107,7 +107,7 @@ export default function SettingsPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <div>
           <h1 className="text-2xl font-serif font-semibold">Settings</h1>
           <p className="text-sm text-gray-500">Tenant, branch, and account preferences</p>
@@ -115,7 +115,7 @@ export default function SettingsPage() {
         <TopBar />
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="bg-card rounded-xl p-5 border border-black/5">
           <h2 className="font-serif font-semibold mb-4">Tenant / Branch Profile</h2>
           <form onSubmit={saveProfile}>
@@ -255,7 +255,7 @@ export default function SettingsPage() {
           )}
         </div>
 
-        <div className="bg-card rounded-xl p-5 border border-black/5 col-span-2">
+        <div className="bg-card rounded-xl p-5 border border-black/5 lg:col-span-2">
           <h2 className="font-serif font-semibold mb-4">Notification Preferences</h2>
           <div className="space-y-3 text-sm">
             <label className="flex items-center justify-between">

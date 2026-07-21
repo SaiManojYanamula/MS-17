@@ -92,7 +92,7 @@ export default function SeatingPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <div>
           <h1 className="text-2xl font-serif font-semibold">Seating Management</h1>
           <p className="text-sm text-gray-500">Click any seat for details</p>
@@ -102,7 +102,7 @@ export default function SeatingPage() {
           {canAddZone && (
             <button
               onClick={() => setShowAddZone(true)}
-              className="bg-sidebar text-white text-sm px-4 py-2 rounded-lg"
+              className="bg-sidebar text-white text-sm px-4 py-2 rounded-lg shrink-0"
             >
               + Add Zone
             </button>
@@ -116,14 +116,14 @@ export default function SeatingPage() {
         <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-expiring inline-block" /> Expiring Soon</span>
       </div>
 
-      <div className="grid grid-cols-3 gap-6">
-        <div className="col-span-2 space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-6">
           {zones.map((zone: any) => (
             <div key={zone.id} className="bg-card rounded-xl p-5 border border-black/5">
               <h2 className="text-xs tracking-wide text-gray-500 mb-3">
                 {zone.name?.toUpperCase()} (SEATS {zone.startSeat}-{zone.endSeat})
               </h2>
-              <div className="grid grid-cols-12 gap-1.5">
+              <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-12 gap-1.5">
                 {zone.seats?.map((s: any) => (
                   <button
                     key={s.id}

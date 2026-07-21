@@ -57,7 +57,7 @@ const roles = [
 export default function RolesPage() {
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <div>
           <h1 className="text-2xl font-serif font-semibold">Roles & Permissions</h1>
           <p className="text-sm text-gray-500">What each role can currently do — reference only</p>
@@ -65,7 +65,7 @@ export default function RolesPage() {
         <TopBar />
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {roles.map((r) => (
           <div key={r.name} className="bg-card rounded-xl p-5 border border-black/5">
             <div className="flex items-center justify-between mb-1">

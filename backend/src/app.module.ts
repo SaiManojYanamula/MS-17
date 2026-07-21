@@ -9,6 +9,9 @@ import { ReportsModule } from './reports/reports.module';
 import { PublicModule } from './public/public.module';
 import { SuperAdminModule } from './super-admin/super-admin.module';
 import { ExpensesModule } from './expenses/expenses.module';
+import { AttendanceModule } from './attendance/attendance.module';
+import { NoticesModule } from './notices/notices.module';
+import { RequestsModule } from './requests/requests.module';
 import { TenantMiddleware } from './common/middleware/tenant.middleware';
 
 @Module({
@@ -23,6 +26,9 @@ import { TenantMiddleware } from './common/middleware/tenant.middleware';
     PublicModule,
     SuperAdminModule,
     ExpensesModule,
+    AttendanceModule,
+    NoticesModule,
+    RequestsModule,
   ],
 })
 export class AppModule implements NestModule {

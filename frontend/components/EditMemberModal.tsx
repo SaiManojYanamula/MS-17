@@ -18,7 +18,6 @@ export default function EditMemberModal({
   const [plan, setPlan] = useState(member.plan ?? 'MONTHLY');
   const [batch, setBatch] = useState(member.batch ?? 'Morning');
   const [expiresAt, setExpiresAt] = useState((member.expiresAt ?? '').slice(0, 10));
-  const [status, setStatus] = useState(member.status ?? 'Active');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -34,7 +33,6 @@ export default function EditMemberModal({
         plan,
         batch,
         expiresAt: expiresAt ? new Date(expiresAt).toISOString() : undefined,
-        status,
       });
       onSuccess();
       onClose();
@@ -46,7 +44,7 @@ export default function EditMemberModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl p-6 w-full max-w-sm border border-black/5">
         <h2 className="font-serif font-semibold text-lg mb-4">Edit Member</h2>
         <form onSubmit={submit} className="space-y-3">
@@ -108,28 +106,17 @@ export default function EditMemberModal({
               </select>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">Expires On</label>
-              <input
-                type="date"
-                value={expiresAt}
-                onChange={(e) => setExpiresAt(e.target.value)}
-                className="w-full border border-black/10 rounded-lg px-3 py-2 text-sm"
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">Status</label>
-              <select
-                value={status}
-                onChange={(e) => setStatus(e.target.value)}
-                className="w-full border border-black/10 rounded-lg px-3 py-2 text-sm"
-              >
-                <option value="Active">Active</option>
-                <option value="Expiring Soon">Expiring Soon</option>
-                <option value="Expired">Expired</option>
-              </select>
-            </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Expires On</label>
+            <input
+              type="date"
+              value={expiresAt}
+              onChange={(e) => setExpiresAt(e.target.value)}
+              className="w-full border border-black/10 rounded-lg px-3 py-2 text-sm"
+            />
+            <p className="text-[11px] text-gray-400 mt-1">
+              Status (Active / Expiring Soon / Expired) is calculated automatically from this date.
+            </p>
           </div>
           {error && <p className="text-xs text-expiring">{error}</p>}
           <div className="flex gap-2 pt-2">

@@ -2,6 +2,22 @@ type IconProps = { className?: string };
 
 const base = 'w-[18px] h-[18px]';
 
+export function MenuIcon({ className = 'w-5 h-5' }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M3.5 6.5h17M3.5 12h17M3.5 17.5h17" />
+    </svg>
+  );
+}
+
+export function CloseIcon({ className = 'w-5 h-5' }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M6 6l12 12M18 6L6 18" />
+    </svg>
+  );
+}
+
 export function DashboardIcon({ className = base }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" className={className}>
@@ -143,6 +159,37 @@ export function BellIcon({ className = 'w-4 h-4' }: IconProps) {
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className}>
       <path d="M6 9a6 6 0 0 1 12 0c0 4 1.5 5.5 2 6.5H4c.5-1 2-2.5 2-6.5Z" />
       <path d="M10 19a2 2 0 0 0 4 0" />
+    </svg>
+  );
+}
+
+export function CalendarIcon({ className = base }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <rect x="3.5" y="5" width="17" height="15.5" rx="2" />
+      <path d="M3.5 9.5h17" />
+      <path d="M8 3v3.5M16 3v3.5" />
+      <path d="M7.5 13.2h1.5M11.2 13.2h1.5M15 13.2h1.5M7.5 16.7h1.5M11.2 16.7h1.5" />
+    </svg>
+  );
+}
+
+export function IdCardIcon({ className = base }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <rect x="2.5" y="4.5" width="19" height="15" rx="2" />
+      <circle cx="8.5" cy="11" r="2.2" />
+      <path d="M5.3 16.8c.6-1.6 1.9-2.4 3.2-2.4s2.6.8 3.2 2.4" />
+      <path d="M14.5 9.5h4M14.5 13h4" />
+    </svg>
+  );
+}
+
+export function RequestIcon({ className = base }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M4 4.5h16v11H8.5L4 19.5v-4H4Z" />
+      <path d="M8 9h8M8 12.2h5" />
     </svg>
   );
 }
