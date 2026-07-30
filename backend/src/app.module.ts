@@ -16,8 +16,10 @@ import { WebhooksModule } from './webhooks/webhooks.module';
 import { TenantMiddleware } from './common/middleware/tenant.middleware';
 import { PrismaService } from './prisma.service';
 import { StorageModule } from './common/storage/storage.module';
+import { AppController } from './app.controller';
 
 @Module({
+  controllers: [AppController],
   imports: [
     StorageModule,
     AuthModule,
@@ -45,6 +47,7 @@ export class AppModule implements NestModule {
     consumer
       .apply(TenantMiddleware)
       .exclude(
+        { path: 'health', method: RequestMethod.GET },
         { path: 'auth/login', method: RequestMethod.POST },
         { path: 'public/apply/:slug', method: RequestMethod.POST },
         { path: 'public/tenant/:slug', method: RequestMethod.GET },
