@@ -27,6 +27,7 @@ export class AuthController {
     @Body()
     body: {
       branchId?: string;
+      branchIds?: string[];
       name: string;
       email: string;
       password: string;
@@ -45,16 +46,26 @@ export class AuthController {
       await this.membersService.findOne(req.tenantId!, body.memberId);
     } else if (req.role !== 'TENANT_OWNER') {
       throw new ForbiddenException(`Role '${req.role}' is not permitted to perform this action`);
+    } else if (!['TENANT_OWNER', 'BRANCH_MANAGER', 'STAFF'].includes(body.role)) {
+      // A tenant owner may only grant roles within their own organization —
+      // never SUPER_ADMIN, which is platform-level and created exclusively
+      // through the /super-admin API.
+      throw new ForbiddenException(`Cannot create an account with role '${body.role}'`);
     }
+
+    // Primary branch defaults to the first of the given branchIds (falls
+    // back to the caller's own branch, unchanged, if none were given).
+    const primaryBranchId = body.branchId ?? body.branchIds?.[0] ?? req.branchId;
 
     return this.authService.register({
       tenantId: req.tenantId!,
-      branchId: body.branchId ?? req.branchId,
+      branchId: primaryBranchId,
       name: body.name,
       email: body.email,
       password: body.password,
       role: body.role,
       memberId: body.memberId,
+      branchIds: body.role === 'STUDENT' ? undefined : body.branchIds,
     });
   }
 }

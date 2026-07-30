@@ -37,6 +37,11 @@ services:
       JWT_SECRET: change-this-to-a-long-random-secret
       REDIS_URL: redis://redis:6379
       PORT: 4000
+      WHATSAPP_API_KEY: ${WHATSAPP_API_KEY:-}
+      WHATSAPP_PHONE_ID: ${WHATSAPP_PHONE_ID:-}
+      WHATSAPP_VERIFY_TOKEN: ${WHATSAPP_VERIFY_TOKEN:-}
+      WHATSAPP_DEFAULT_APPLY_SLUG: ${WHATSAPP_DEFAULT_APPLY_SLUG:-}
+      APP_PUBLIC_URL: ${APP_PUBLIC_URL:-http://localhost:3000}
     ports:
       - '4000:4000'
     volumes:

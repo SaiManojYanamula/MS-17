@@ -5,24 +5,24 @@ import { PrismaService } from '../prisma.service';
 export class ExpensesService {
   constructor(private prisma: PrismaService) {}
 
-  async findAll(tenantId: string) {
+  async findAll(tenantId: string, branchId: string) {
     return this.prisma.expense.findMany({
-      where: { tenantId },
+      where: { tenantId, branchId },
       orderBy: { createdAt: 'desc' },
     });
   }
 
-  async summary(tenantId: string) {
+  async summary(tenantId: string, branchId: string) {
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
     const [thisMonthAgg, totalAgg] = await Promise.all([
       this.prisma.expense.aggregate({
-        where: { tenantId, createdAt: { gte: monthStart } },
+        where: { tenantId, branchId, createdAt: { gte: monthStart } },
         _sum: { amount: true },
       }),
       this.prisma.expense.aggregate({
-        where: { tenantId },
+        where: { tenantId, branchId },
         _sum: { amount: true },
         _count: true,
       }),

@@ -21,6 +21,27 @@ export default function EditMemberModal({
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  const [newPassword, setNewPassword] = useState('');
+  const [resettingPw, setResettingPw] = useState(false);
+  const [resetPwMsg, setResetPwMsg] = useState('');
+  const [resetPwError, setResetPwError] = useState('');
+
+  const resetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setResetPwError('');
+    setResetPwMsg('');
+    setResettingPw(true);
+    try {
+      await api.resetMemberPassword(member.id, newPassword);
+      setResetPwMsg('Password reset — share the new password with the student.');
+      setNewPassword('');
+    } catch (err: any) {
+      setResetPwError(err.message || 'Could not reset password');
+    } finally {
+      setResettingPw(false);
+    }
+  };
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -64,6 +85,8 @@ export default function EditMemberModal({
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               placeholder="e.g. 9876543210"
+              pattern="(\+?91[-\s]?|0)?[6-9]\d{9}"
+              title="Enter a valid 10-digit Indian phone number"
               className="w-full border border-black/10 rounded-lg px-3 py-2 text-sm"
             />
             <p className="text-[11px] text-gray-400 mt-1">
@@ -72,6 +95,34 @@ export default function EditMemberModal({
                 : 'Adding a phone number creates their portal login (default password 1234).'}
             </p>
           </div>
+
+          {member.user && (
+            <div className="border border-black/10 rounded-lg p-3">
+              <label className="block text-xs text-gray-500 mb-1">
+                Reset Portal Password (forgot password)
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="New password (min 6 chars)"
+                  minLength={6}
+                  className="flex-1 border border-black/10 rounded-lg px-3 py-2 text-sm"
+                />
+                <button
+                  type="button"
+                  onClick={resetPassword}
+                  disabled={resettingPw || newPassword.length < 6}
+                  className="bg-sidebar text-white text-xs px-3 rounded-lg disabled:opacity-60 shrink-0"
+                >
+                  {resettingPw ? 'Saving…' : 'Reset'}
+                </button>
+              </div>
+              {resetPwMsg && <p className="text-[11px] text-free mt-1">{resetPwMsg}</p>}
+              {resetPwError && <p className="text-[11px] text-expiring mt-1">{resetPwError}</p>}
+            </div>
+          )}
           <div>
             <label className="block text-xs text-gray-500 mb-1">Goal Tag</label>
             <input

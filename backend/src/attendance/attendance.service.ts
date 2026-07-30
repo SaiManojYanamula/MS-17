@@ -14,14 +14,14 @@ export class AttendanceService {
 
   // Staff marking view — every active member in the tenant, with their
   // attendance status for the given date if it's already been marked.
-  async findForDate(tenantId: string, date: string) {
+  async findForDate(tenantId: string, branchId: string, date: string) {
     const [members, marked] = await Promise.all([
       this.prisma.member.findMany({
-        where: { tenantId },
+        where: { tenantId, branchId },
         select: { id: true, name: true, batch: true },
         orderBy: { name: 'asc' },
       }),
-      this.prisma.attendance.findMany({ where: { tenantId, date: new Date(date) } }),
+      this.prisma.attendance.findMany({ where: { tenantId, branchId, date: new Date(date) } }),
     ]);
 
     const statusByMember = new Map(marked.map((a) => [a.memberId, a.status]));

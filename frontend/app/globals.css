@@ -4,4 +4,13 @@
 
 body {
   background-color: #f4f6f9;
+  font-family: var(--font-inter), system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+* {
+  scrollbar-width: thin;
+}
+
+::selection {
+  background-color: rgba(13, 148, 136, 0.2);
 }

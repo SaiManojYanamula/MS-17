@@ -5,6 +5,7 @@ import TopBar from '@/components/TopBar';
 import AddExpenseModal from '@/components/AddExpenseModal';
 import { api, API_ORIGIN } from '@/lib/api';
 import { formatDate } from '@/lib/format';
+import { downloadCsv } from '@/lib/csv';
 
 const categoryColors: Record<string, string> = {
   Rent: '#2a78d6',
@@ -30,6 +31,19 @@ export default function ExpensesPage() {
     refetch();
   }, []);
 
+  const exportCsv = () => {
+    downloadCsv(
+      `expenses-${new Date().toISOString().slice(0, 10)}.csv`,
+      [
+        { header: 'Category', key: 'category' },
+        { header: 'Amount', key: 'amount' },
+        { header: 'Note', key: 'note' },
+        { header: 'Date', key: 'createdAt' },
+      ],
+      expenses,
+    );
+  };
+
   return (
     <div>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
@@ -39,6 +53,12 @@ export default function ExpensesPage() {
         </div>
         <div className="flex items-center gap-3">
           <TopBar />
+          <button
+            onClick={exportCsv}
+            className="border border-black/10 text-sm px-4 py-2 rounded-lg shrink-0"
+          >
+            Export CSV
+          </button>
           <button
             onClick={() => setShowAdd(true)}
             className="bg-sidebar text-white text-sm px-4 py-2 rounded-lg shrink-0"

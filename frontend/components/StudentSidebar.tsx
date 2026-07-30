@@ -19,18 +19,22 @@ const links = [
   { href: '/portal', label: 'Dashboard', icon: DashboardIcon },
   { href: '/portal/membership', label: 'My Membership', icon: IdCardIcon },
   { href: '/portal/payments', label: 'Payments', icon: PaymentsIcon },
-  { href: '/portal/attendance', label: 'Attendance', icon: CalendarIcon },
-  { href: '/portal/notices', label: 'Notices', icon: BellIcon, badgeKey: 'notices' },
-  { href: '/portal/requests', label: 'Raise a Request', icon: RequestIcon },
+  { href: '/portal/attendance', label: 'Attendance', icon: CalendarIcon, feature: 'ATTENDANCE' },
+  { href: '/portal/notices', label: 'Notices', icon: BellIcon, badgeKey: 'notices', feature: 'NOTICES' },
+  { href: '/portal/requests', label: 'Raise a Request', icon: RequestIcon, feature: 'REQUESTS' },
 ];
 
 export default function StudentSidebar({ open = false, onClose }: { open?: boolean; onClose?: () => void }) {
   const pathname = usePathname();
-  const { user, logout } = useAuth();
+  const { user, logout, enabledFeatures } = useAuth();
   const [recentNoticeCount, setRecentNoticeCount] = useState(0);
 
+  const visibleLinks = links.filter(
+    (l) => !l.feature || !enabledFeatures || enabledFeatures.includes(l.feature),
+  );
+
   useEffect(() => {
-    if (!user) return;
+    if (!user || (enabledFeatures && !enabledFeatures.includes('NOTICES'))) return;
     api
       .notices()
       .then((notices) => {
@@ -39,7 +43,7 @@ export default function StudentSidebar({ open = false, onClose }: { open?: boole
         setRecentNoticeCount(recent.length);
       })
       .catch(() => {});
-  }, [user]);
+  }, [user, enabledFeatures]);
 
   const initials = user?.name
     ? user.name.split(' ').map((p) => p[0]).join('').slice(0, 2).toUpperCase()
@@ -64,7 +68,7 @@ export default function StudentSidebar({ open = false, onClose }: { open?: boole
       </div>
 
       <div className="text-[10px] tracking-widest text-gray-400 px-2 mb-2">OVERVIEW</div>
-      {links.map((link) => {
+      {visibleLinks.map((link) => {
         const active = pathname === link.href;
         const Icon = link.icon;
         const badgeCount = link.badgeKey === 'notices' ? recentNoticeCount : 0;

@@ -8,6 +8,7 @@ import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { mockPaymentsSummary, mockTransactions } from '@/lib/mockData';
 import { formatDate, memberNameOf } from '@/lib/format';
+import { downloadCsv } from '@/lib/csv';
 
 const tabs = ['All Transactions', 'Paid', 'Pending', 'Refunded'];
 const statusMap: Record<string, string | undefined> = {
@@ -35,6 +36,21 @@ export default function PaymentsPage() {
     refetch();
   }, [tab]);
 
+  const exportCsv = () => {
+    downloadCsv(
+      `payments-${tab.toLowerCase().replace(/\s+/g, '-')}-${new Date().toISOString().slice(0, 10)}.csv`,
+      [
+        { header: 'Member', key: 'memberName' },
+        { header: 'Amount', key: 'amount' },
+        { header: 'Method', key: 'method' },
+        { header: 'Label', key: 'label' },
+        { header: 'Status', key: 'status' },
+        { header: 'Date', key: 'createdAt' },
+      ],
+      transactions.map((t: any) => ({ ...t, memberName: memberNameOf(t.member) })),
+    );
+  };
+
   const refund = async (id: string) => {
     setError('');
     const snapshot = transactions;
@@ -60,6 +76,12 @@ export default function PaymentsPage() {
         </div>
         <div className="flex items-center gap-3">
           <TopBar />
+          <button
+            onClick={exportCsv}
+            className="border border-black/10 text-sm px-4 py-2 rounded-lg shrink-0"
+          >
+            Export CSV
+          </button>
           <button
             onClick={() => setShowRecord(true)}
             className="bg-sidebar text-white text-sm px-4 py-2 rounded-lg shrink-0"

@@ -83,12 +83,13 @@ export default function AddOrganizationModal({
               required
               className="w-full border border-black/10 rounded-lg px-3 py-2 text-sm mb-3"
             />
-            <label className="block text-xs text-gray-500 mb-1">Temporary Password</label>
+            <label className="block text-xs text-gray-500 mb-1">Temporary Password (min 6 characters)</label>
             <input
               type="password"
               value={ownerPassword}
               onChange={(e) => setOwnerPassword(e.target.value)}
               required
+              minLength={6}
               className="w-full border border-black/10 rounded-lg px-3 py-2 text-sm"
             />
           </div>

@@ -3,23 +3,36 @@
 import { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
 import TopBar from '@/components/TopBar';
-import { api } from '@/lib/api';
+import { api, API_ORIGIN } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 
 export default function SettingsPage() {
   const { user, hasRole } = useAuth();
   const [tenantName, setTenantName] = useState('');
   const [tenantSlug, setTenantSlug] = useState('');
+  const [upiId, setUpiId] = useState('');
+  const [upiPhone, setUpiPhone] = useState('');
+  const [coverImageUrl, setCoverImageUrl] = useState('');
+  const [uploadingCover, setUploadingCover] = useState(false);
+  const [coverError, setCoverError] = useState('');
   const [branchName, setBranchName] = useState('');
   const [branchId, setBranchId] = useState<string | null>(null);
   const [notifyExpiry, setNotifyExpiry] = useState(true);
   const [notifyPayments, setNotifyPayments] = useState(true);
   const [notifyWhatsapp, setNotifyWhatsapp] = useState(false);
+  const [whatsappAccessEnabled, setWhatsappAccessEnabled] = useState(false);
   const [profileError, setProfileError] = useState('');
   const [profileSaved, setProfileSaved] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
   const [qrDataUrl, setQrDataUrl] = useState('');
   const [linkCopied, setLinkCopied] = useState(false);
+
+  const [allBranches, setAllBranches] = useState<{ id: string; name: string }[]>([]);
+  const [newBranchName, setNewBranchName] = useState('');
+  const [addingBranch, setAddingBranch] = useState(false);
+  const [branchError, setBranchError] = useState('');
+
+  const refetchBranches = () => api.myBranches().then(setAllBranches).catch(() => {});
 
   useEffect(() => {
     api
@@ -27,11 +40,47 @@ export default function SettingsPage() {
       .then((res) => {
         if (res.tenant?.name) setTenantName(res.tenant.name);
         if (res.tenant?.slug) setTenantSlug(res.tenant.slug);
+        if (res.tenant?.upiId) setUpiId(res.tenant.upiId);
+        if (res.tenant?.upiPhone) setUpiPhone(res.tenant.upiPhone);
+        if (res.tenant?.coverImageUrl) setCoverImageUrl(res.tenant.coverImageUrl);
+        if (res.tenant?.notifyExpiry !== undefined) setNotifyExpiry(res.tenant.notifyExpiry);
+        if (res.tenant?.notifyPayments !== undefined) setNotifyPayments(res.tenant.notifyPayments);
+        if (res.tenant?.notifyWhatsapp !== undefined) setNotifyWhatsapp(res.tenant.notifyWhatsapp);
+        if (res.tenant?.whatsappAccessEnabled !== undefined) setWhatsappAccessEnabled(res.tenant.whatsappAccessEnabled);
         if (res.branch?.name) setBranchName(res.branch.name);
         if (res.branch?.id) setBranchId(res.branch.id);
       })
       .catch(() => {});
+    refetchBranches();
   }, []);
+
+  const addBranch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBranchError('');
+    setAddingBranch(true);
+    try {
+      await api.addBranch({ name: newBranchName });
+      setNewBranchName('');
+      refetchBranches();
+    } catch (err: any) {
+      setBranchError(err.message || 'Could not add branch');
+    } finally {
+      setAddingBranch(false);
+    }
+  };
+
+  const uploadCover = async (file: File) => {
+    setCoverError('');
+    setUploadingCover(true);
+    try {
+      const res = await api.uploadTenantCover(file);
+      if (res.coverImageUrl) setCoverImageUrl(res.coverImageUrl);
+    } catch (err: any) {
+      setCoverError(err.message || 'Could not upload image');
+    } finally {
+      setUploadingCover(false);
+    }
+  };
 
   const applyUrl = tenantSlug && typeof window !== 'undefined'
     ? `${window.location.origin}/apply/${tenantSlug}`
@@ -55,7 +104,7 @@ export default function SettingsPage() {
     setSavingProfile(true);
     try {
       await Promise.all([
-        api.updateTenant(tenantName),
+        api.updateTenant({ name: tenantName, upiId: upiId || undefined, upiPhone: upiPhone || undefined }),
         branchId ? api.updateBranch(branchId, { name: branchName }) : Promise.resolve(),
       ]);
       setProfileSaved(true);
@@ -66,16 +115,47 @@ export default function SettingsPage() {
     }
   };
 
-  const [staff, setStaff] = useState<{ name: string; role: string }[]>(
-    user ? [{ name: user.name, role: user.role }] : [],
-  );
+  const [staff, setStaff] = useState<
+    { id: string; name: string; email: string; role: string; isActive: boolean }[]
+  >([]);
+  const refetchUsers = () => api.myUsers().then(setStaff).catch(() => {});
   const [showInvite, setShowInvite] = useState(false);
   const [inviteName, setInviteName] = useState('');
   const [inviteEmail, setInviteEmail] = useState('');
   const [invitePassword, setInvitePassword] = useState('');
   const [inviteRole, setInviteRole] = useState('STAFF');
+  const [inviteBranchIds, setInviteBranchIds] = useState<string[]>([]);
   const [inviteError, setInviteError] = useState('');
   const [inviting, setInviting] = useState(false);
+
+  const [resettingUserId, setResettingUserId] = useState<string | null>(null);
+  const [resetPasswordValue, setResetPasswordValue] = useState('');
+  const [resetError, setResetError] = useState('');
+  const [resetting, setResetting] = useState(false);
+
+  const toggleInviteBranch = (id: string) => {
+    setInviteBranchIds((prev) => (prev.includes(id) ? prev.filter((b) => b !== id) : [...prev, id]));
+  };
+
+  useEffect(() => {
+    refetchUsers();
+  }, []);
+
+  const submitResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resettingUserId) return;
+    setResetError('');
+    setResetting(true);
+    try {
+      await api.resetUserPassword(resettingUserId, resetPasswordValue);
+      setResettingUserId(null);
+      setResetPasswordValue('');
+    } catch (err: any) {
+      setResetError(err.message || 'Could not reset password');
+    } finally {
+      setResetting(false);
+    }
+  };
 
   if (!hasRole('TENANT_OWNER')) {
     return (
@@ -91,12 +171,19 @@ export default function SettingsPage() {
     setInviteError('');
     setInviting(true);
     try {
-      await api.inviteStaff({ name: inviteName, email: inviteEmail, password: invitePassword, role: inviteRole });
-      setStaff((prev) => [...prev, { name: inviteName, role: inviteRole }]);
+      await api.inviteStaff({
+        name: inviteName,
+        email: inviteEmail,
+        password: invitePassword,
+        role: inviteRole,
+        branchIds: inviteBranchIds.length ? inviteBranchIds : undefined,
+      });
+      refetchUsers();
       setInviteName('');
       setInviteEmail('');
       setInvitePassword('');
       setInviteRole('STAFF');
+      setInviteBranchIds([]);
       setShowInvite(false);
     } catch (err: any) {
       setInviteError(err.message || 'Could not invite staff member');
@@ -137,6 +224,54 @@ export default function SettingsPage() {
               }}
               className="w-full border border-black/10 rounded-lg px-3 py-2 text-sm mb-4"
             />
+            <label className="block text-xs text-gray-500 mb-1">UPI ID (for student self-booking payments)</label>
+            <input
+              value={upiId}
+              onChange={(e) => {
+                setUpiId(e.target.value);
+                setProfileSaved(false);
+              }}
+              placeholder="yourname@okhdfcbank"
+              className="w-full border border-black/10 rounded-lg px-3 py-2 text-sm mb-4"
+            />
+            <label className="block text-xs text-gray-500 mb-1">GPay / PhonePe Number (optional)</label>
+            <input
+              value={upiPhone}
+              onChange={(e) => {
+                setUpiPhone(e.target.value);
+                setProfileSaved(false);
+              }}
+              placeholder="9876543210"
+              className="w-full border border-black/10 rounded-lg px-3 py-2 text-sm mb-4"
+            />
+
+            <label className="block text-xs text-gray-500 mb-1">
+              Booking Page Background Image (optional)
+            </label>
+            <p className="text-[11px] text-gray-400 mb-2">
+              Shown behind your QR/booking page instead of the plain color — a photo of your
+              study hall works well.
+            </p>
+            {coverImageUrl && (
+              <img
+                src={`${API_ORIGIN}${coverImageUrl}`}
+                alt="Booking page background"
+                className="w-full h-28 object-cover rounded-lg mb-2 border border-black/10"
+              />
+            )}
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              disabled={uploadingCover}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) uploadCover(file);
+              }}
+              className="w-full border border-black/10 rounded-lg px-3 py-2 text-sm mb-1 file:mr-3 file:border-0 file:bg-navy/5 file:text-navy file:rounded-md file:px-3 file:py-1.5 file:text-xs"
+            />
+            {uploadingCover && <p className="text-xs text-gray-400 mb-3">Uploading…</p>}
+            {coverError && <p className="text-xs text-expiring mb-3">{coverError}</p>}
+
             {profileError && <p className="text-xs text-expiring mb-3">{profileError}</p>}
             {profileSaved && <p className="text-xs text-free mb-3">Saved.</p>}
             <button
@@ -150,10 +285,11 @@ export default function SettingsPage() {
         </div>
 
         <div className="bg-card rounded-xl p-5 border border-black/5">
-          <h2 className="font-serif font-semibold mb-1">Application QR Code</h2>
+          <h2 className="font-serif font-semibold mb-1">Seat Booking QR Code</h2>
           <p className="text-xs text-gray-500 mb-4">
-            Print this or show it on a screen — anyone who scans it gets a form to apply for a
-            seat, no login needed. Submissions land in Applications as Pending.
+            Print this or show it on a screen — anyone who scans it can pick a branch, see live
+            available seats, and book one instantly by paying via your UPI QR. No login needed,
+            and no approval step — they become a member the moment they pay.
           </p>
           {qrDataUrl ? (
             <div className="flex flex-col items-center gap-3">
@@ -184,12 +320,53 @@ export default function SettingsPage() {
         <div className="bg-card rounded-xl p-5 border border-black/5">
           <h2 className="font-serif font-semibold mb-4">Admin &amp; Staff Accounts</h2>
           <div className="space-y-3 text-sm">
-            {staff.map((s, i) => (
-              <div key={i} className="flex items-center justify-between border-b border-black/5 pb-2">
-                <div>
-                  <div className="font-medium">{s.name}</div>
-                  <div className="text-xs text-gray-400">{s.role.replace('_', ' ')}</div>
+            {staff.map((s) => (
+              <div key={s.id} className="border-b border-black/5 pb-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="font-medium">
+                      {s.name} {s.id === user?.id && <span className="text-gray-400">(you)</span>}
+                    </div>
+                    <div className="text-xs text-gray-400">
+                      {s.email} · {s.role.replace('_', ' ')}
+                    </div>
+                  </div>
+                  {s.id !== user?.id && (
+                    <button
+                      onClick={() => {
+                        setResettingUserId(resettingUserId === s.id ? null : s.id);
+                        setResetPasswordValue('');
+                        setResetError('');
+                      }}
+                      className="text-xs text-accent font-medium shrink-0"
+                    >
+                      Reset Password
+                    </button>
+                  )}
                 </div>
+                {resettingUserId === s.id && (
+                  <form onSubmit={submitResetPassword} className="flex gap-2 mt-2">
+                    <input
+                      type="password"
+                      placeholder="New password (min 6 chars)"
+                      value={resetPasswordValue}
+                      onChange={(e) => setResetPasswordValue(e.target.value)}
+                      required
+                      minLength={6}
+                      className="flex-1 border border-black/10 rounded-lg px-3 py-1.5 text-xs"
+                    />
+                    <button
+                      type="submit"
+                      disabled={resetting}
+                      className="bg-sidebar text-white text-xs px-3 py-1.5 rounded-lg disabled:opacity-60 shrink-0"
+                    >
+                      {resetting ? 'Saving…' : 'Save'}
+                    </button>
+                  </form>
+                )}
+                {resettingUserId === s.id && resetError && (
+                  <p className="text-xs text-expiring mt-1">{resetError}</p>
+                )}
               </div>
             ))}
           </div>
@@ -212,11 +389,12 @@ export default function SettingsPage() {
                 className="w-full border border-black/10 rounded-lg px-3 py-2 text-sm"
               />
               <input
-                placeholder="Temporary password"
+                placeholder="Temporary password (min 6 characters)"
                 type="password"
                 value={invitePassword}
                 onChange={(e) => setInvitePassword(e.target.value)}
                 required
+                minLength={6}
                 className="w-full border border-black/10 rounded-lg px-3 py-2 text-sm"
               />
               <select
@@ -227,6 +405,23 @@ export default function SettingsPage() {
                 <option value="STAFF">Staff</option>
                 <option value="BRANCH_MANAGER">Branch Manager</option>
               </select>
+              {allBranches.length > 1 && (
+                <div className="border border-black/10 rounded-lg p-2">
+                  <div className="text-xs text-gray-500 mb-1">
+                    Branches this account can access (defaults to your primary branch if none picked)
+                  </div>
+                  {allBranches.map((b) => (
+                    <label key={b.id} className="flex items-center gap-2 text-sm py-0.5">
+                      <input
+                        type="checkbox"
+                        checked={inviteBranchIds.includes(b.id)}
+                        onChange={() => toggleInviteBranch(b.id)}
+                      />
+                      {b.name}
+                    </label>
+                  ))}
+                </div>
+              )}
               {inviteError && <p className="text-xs text-expiring">{inviteError}</p>}
               <div className="flex gap-2">
                 <button
@@ -255,6 +450,38 @@ export default function SettingsPage() {
           )}
         </div>
 
+        <div className="bg-card rounded-xl p-5 border border-black/5">
+          <h2 className="font-serif font-semibold mb-1">Branches</h2>
+          <p className="text-xs text-gray-500 mb-4">
+            Running more than one location? Add each branch here — you can see and manage all of
+            them from the branch switcher in the sidebar.
+          </p>
+          <div className="space-y-2 text-sm mb-4">
+            {allBranches.map((b) => (
+              <div key={b.id} className="border-b border-black/5 pb-2">
+                {b.name}
+              </div>
+            ))}
+          </div>
+          <form onSubmit={addBranch} className="flex gap-2">
+            <input
+              placeholder="New branch name"
+              value={newBranchName}
+              onChange={(e) => setNewBranchName(e.target.value)}
+              required
+              className="flex-1 border border-black/10 rounded-lg px-3 py-2 text-sm"
+            />
+            <button
+              type="submit"
+              disabled={addingBranch}
+              className="bg-sidebar text-white text-sm px-4 py-2 rounded-lg disabled:opacity-60 shrink-0"
+            >
+              {addingBranch ? 'Adding…' : '+ Add Branch'}
+            </button>
+          </form>
+          {branchError && <p className="text-xs text-expiring mt-2">{branchError}</p>}
+        </div>
+
         <div className="bg-card rounded-xl p-5 border border-black/5 lg:col-span-2">
           <h2 className="font-serif font-semibold mb-4">Notification Preferences</h2>
           <div className="space-y-3 text-sm">
@@ -263,7 +490,10 @@ export default function SettingsPage() {
               <input
                 type="checkbox"
                 checked={notifyExpiry}
-                onChange={(e) => setNotifyExpiry(e.target.checked)}
+                onChange={(e) => {
+                  setNotifyExpiry(e.target.checked);
+                  api.updateTenant({ notifyExpiry: e.target.checked }).catch(() => {});
+                }}
               />
             </label>
             <label className="flex items-center justify-between">
@@ -271,18 +501,30 @@ export default function SettingsPage() {
               <input
                 type="checkbox"
                 checked={notifyPayments}
-                onChange={(e) => setNotifyPayments(e.target.checked)}
+                onChange={(e) => {
+                  setNotifyPayments(e.target.checked);
+                  api.updateTenant({ notifyPayments: e.target.checked }).catch(() => {});
+                }}
               />
             </label>
             <label className="flex items-center justify-between">
               <span>
                 WhatsApp notifications
-                <span className="block text-[11px] text-gray-400">Sends expiry & payment alerts via WhatsApp</span>
+                <span className="block text-[11px] text-gray-400">
+                  {whatsappAccessEnabled
+                    ? 'Sends expiry & payment alerts via WhatsApp'
+                    : 'Not enabled for your organization yet — contact the platform admin'}
+                </span>
               </span>
               <input
                 type="checkbox"
                 checked={notifyWhatsapp}
-                onChange={(e) => setNotifyWhatsapp(e.target.checked)}
+                disabled={!whatsappAccessEnabled}
+                onChange={(e) => {
+                  setNotifyWhatsapp(e.target.checked);
+                  api.updateTenant({ notifyWhatsapp: e.target.checked }).catch(() => {});
+                }}
+                className="disabled:opacity-40"
               />
             </label>
           </div>

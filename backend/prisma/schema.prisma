@@ -85,12 +85,43 @@ model Tenant {
   slug      String           @unique
   status    TenantStatus     @default(ACTIVE)
   plan      SubscriptionPlan @default(BASIC)
-  createdAt DateTime         @default(now())
+  upiId          String? // owner's UPI ID (e.g. "name@okhdfcbank") — shown as a payment QR during self-service seat booking
+  upiPhone       String? // owner's phone number for GPay/PhonePe, shown alongside the UPI QR
+  coverImageUrl  String? // branding image shown behind the public QR/booking page
+  notifyExpiry   Boolean          @default(true) // send membership expiry reminders
+  notifyPayments Boolean          @default(true) // send payment received/booking confirmed alerts
+  notifyWhatsapp Boolean          @default(false) // also send the above via WhatsApp, not just SMS
+  // Platform-controlled gate — a tenant owner can only turn notifyWhatsapp on
+  // once the super-admin has granted this. Since each WhatsApp message costs
+  // the platform money, this is the rollout/billing control point.
+  whatsappAccessEnabled Boolean   @default(false)
+  // Comma-separated feature keys this org has access to — Super Admin picks
+  // exactly which optional modules each org gets, independent of plan.
+  // Core modules (Members/Payments/Settings/Dashboard) are never gated.
+  enabledFeatures String @default("EXPENSES,NOTICES,REQUESTS,SEATING,REPORTS,ATTENDANCE")
+  createdAt      DateTime         @default(now())
   updatedAt DateTime         @updatedAt
 
   branches Branch[]
   users    User[]
   members  Member[]
+  whatsappLogs WhatsAppMessageLog[]
+}
+
+// One row per WhatsApp send attempt — powers the super-admin's per-org usage
+// view (message volume is the thing that costs the platform money).
+model WhatsAppMessageLog {
+  id        String   @id @default(uuid())
+  tenantId  String
+  phone     String
+  direction String // "outbound" (business-initiated) or "reply" (session reply)
+  status    String // "sent" or "failed"
+  createdAt DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+  @@index([createdAt])
 }
 
 model Branch {
@@ -100,7 +131,7 @@ model Branch {
   address   String?
   createdAt DateTime @default(now())
 
-  tenant       Tenant        @relation(fields: [tenantId], references: [id])
+  tenant       Tenant             @relation(fields: [tenantId], references: [id])
   zones        Zone[]
   members      Member[]
   applications Application[]
@@ -110,6 +141,7 @@ model Branch {
   attendance   Attendance[]
   notices      Notice[]
   requests     Request[]
+  userAccess   UserBranchAccess[]
 
   @@index([tenantId])
 }
@@ -117,7 +149,7 @@ model Branch {
 model User {
   id        String   @id @default(uuid())
   tenantId  String? // null for SUPER_ADMIN — the only role not scoped to one tenant
-  branchId  String?
+  branchId  String? // primary/default branch — used when creating new records with no explicit branch context
   name      String
   email     String   @unique
   password  String
@@ -126,11 +158,27 @@ model User {
   memberId  String?  @unique // set when role is STUDENT — links the login to their Member record
   createdAt DateTime @default(now())
 
-  tenant Tenant? @relation(fields: [tenantId], references: [id])
-  branch Branch? @relation(fields: [branchId], references: [id])
-  member Member? @relation(fields: [memberId], references: [id])
+  tenant       Tenant?            @relation(fields: [tenantId], references: [id])
+  branch       Branch?            @relation(fields: [branchId], references: [id])
+  member       Member?            @relation(fields: [memberId], references: [id])
+  branchAccess UserBranchAccess[]
 
   @@index([tenantId])
+}
+
+// Extra branches a BRANCH_MANAGER/STAFF user can switch into beyond their
+// primary User.branchId. TENANT_OWNER never needs rows here — ownership of
+// the tenant implicitly grants access to every branch under it.
+model UserBranchAccess {
+  id       String @id @default(uuid())
+  userId   String
+  branchId String
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  branch Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, branchId])
+  @@index([branchId])
 }
 
 model Zone {
@@ -165,19 +213,19 @@ model Seat {
 }
 
 model Member {
-  id          String    @id @default(uuid())
-  tenantId    String
-  branchId    String
-  displayId   String?   @unique // e.g. "AKR-2214" — shown to the student as their Student ID
-  name        String
-  phone       String? // also used as the login username for their auto-created STUDENT account
-  goalTag     String? // e.g. "UPSC Aspirant", "NEET Aspirant"
-  plan        PlanType
-  batch       String // e.g. "Morning", "Day", "Evening"
-  expiresAt   DateTime
-  status      String    @default("Active") // Active / Expiring Soon / Expired
-  joinedAt    DateTime  @default(now())
-  aadharUrl   String? // path to uploaded Aadhar card image/PDF, carried over from Application on approval
+  id        String   @id @default(uuid())
+  tenantId  String
+  branchId  String
+  displayId String?  @unique // e.g. "AKR-2214" — shown to the student as their Student ID
+  name      String
+  phone     String? // also used as the login username for their auto-created STUDENT account
+  goalTag   String? // e.g. "UPSC Aspirant", "NEET Aspirant"
+  plan      PlanType
+  batch     String // e.g. "Morning", "Day", "Evening"
+  expiresAt DateTime
+  status    String   @default("Active") // Active / Expiring Soon / Expired
+  joinedAt  DateTime @default(now())
+  aadharUrl String? // path to uploaded Aadhar card image/PDF, carried over from Application on approval
 
   tenant     Tenant       @relation(fields: [tenantId], references: [id])
   branch     Branch       @relation(fields: [branchId], references: [id])
@@ -192,16 +240,16 @@ model Member {
 }
 
 model Application {
-  id          String            @id @default(uuid())
-  tenantId    String
-  branchId    String
-  applicant   String
-  goalTag     String?
-  plan        PlanType
-  batch       String
-  aadharUrl   String? // path to uploaded Aadhar card image/PDF
-  appliedAt   DateTime          @default(now())
-  status      ApplicationStatus @default(PENDING)
+  id        String            @id @default(uuid())
+  tenantId  String
+  branchId  String
+  applicant String
+  goalTag   String?
+  plan      PlanType
+  batch     String
+  aadharUrl String? // path to uploaded Aadhar card image/PDF
+  appliedAt DateTime          @default(now())
+  status    ApplicationStatus @default(PENDING)
 
   branch Branch @relation(fields: [branchId], references: [id])
 

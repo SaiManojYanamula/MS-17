@@ -30,9 +30,21 @@ export class SuperAdminController {
   @Patch('organizations/:id')
   updateOrganization(
     @Param('id') id: string,
-    @Body() body: { name?: string; plan?: string; status?: string },
+    @Body()
+    body: {
+      name?: string;
+      plan?: string;
+      status?: string;
+      whatsappAccessEnabled?: boolean;
+      enabledFeatures?: string[];
+    },
   ) {
     return this.superAdminService.updateOrganization(id, body);
+  }
+
+  @Get('whatsapp-usage')
+  getWhatsAppUsage() {
+    return this.superAdminService.getWhatsAppUsage();
   }
 
   @Get('branches')
@@ -58,7 +70,15 @@ export class SuperAdminController {
   @Post('users')
   createUser(
     @Body()
-    body: { tenantId: string; branchId?: string; name: string; email: string; password: string; role: string },
+    body: {
+      tenantId: string;
+      branchId?: string;
+      branchIds?: string[];
+      name: string;
+      email: string;
+      password: string;
+      role: string;
+    },
   ) {
     return this.superAdminService.createUser(body);
   }
@@ -66,5 +86,10 @@ export class SuperAdminController {
   @Patch('users/:id')
   updateUser(@Param('id') id: string, @Body() body: { role?: string; isActive?: boolean }) {
     return this.superAdminService.updateUser(id, body);
+  }
+
+  @Patch('users/:id/reset-password')
+  resetUserPassword(@Param('id') id: string, @Body('password') password: string) {
+    return this.superAdminService.resetUserPassword(id, password);
   }
 }

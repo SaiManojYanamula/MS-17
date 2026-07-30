@@ -36,6 +36,11 @@ export default function DashboardPage() {
   const [pending, setPending] = useState(mockPendingApplications);
   const [activity, setActivity] = useState(mockRecentActivity);
   const [revenue] = useState(mockRevenueTrend);
+  const [newMembers, setNewMembers] = useState<{ count: number; members: any[] }>({
+    count: 0,
+    members: [],
+  });
+  const [newMembersDays, setNewMembersDays] = useState(7);
   const [showAddMember, setShowAddMember] = useState(false);
 
   const refetch = () => {
@@ -44,11 +49,16 @@ export default function DashboardPage() {
     api.dashboardStats().then(setStats).catch(() => {});
     api.applications('PENDING').then(setPending).catch(() => {});
     api.recentActivity(5).then(setActivity).catch(() => {});
+    api.newMembersThisWeek(newMembersDays).then(setNewMembers).catch(() => {});
   };
 
   useEffect(() => {
     refetch();
   }, []);
+
+  useEffect(() => {
+    api.newMembersThisWeek(newMembersDays).then(setNewMembers).catch(() => {});
+  }, [newMembersDays]);
 
   const firstName = user?.name?.split(' ')[0] ?? '';
 
@@ -74,8 +84,8 @@ export default function DashboardPage() {
         <StatCard icon="👤" value={String(stats.activeMembers)} label="Active Members" />
         <StatCard
           icon="🪑"
-          value={`${stats.seatsOccupied} / ${stats.seatsTotal}`}
-          label="Seats Occupied"
+          value={`${stats.seatsOccupied} filled · ${stats.seatsTotal - stats.seatsOccupied} free`}
+          label={`Seats (${stats.seatsTotal} total)`}
           changePct={26}
         />
         <StatCard
@@ -150,6 +160,52 @@ export default function DashboardPage() {
             ))}
           </ul>
         </div>
+      </div>
+
+      <div className="bg-card rounded-xl p-5 border border-black/5 mb-6">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="font-serif font-semibold">New Members</h2>
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-gray-400">{newMembers.count} joined</span>
+            <select
+              value={newMembersDays}
+              onChange={(e) => setNewMembersDays(Number(e.target.value))}
+              className="border border-black/10 rounded-lg px-2 py-1 text-xs"
+            >
+              <option value={7}>Last 7 days</option>
+              <option value={30}>Last 30 days</option>
+              <option value={90}>Last 90 days</option>
+            </select>
+          </div>
+        </div>
+        {newMembers.members.length === 0 ? (
+          <p className="text-sm text-gray-400">No new members in this period.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[500px]">
+              <thead>
+                <tr className="text-left text-[10px] text-gray-400 tracking-wide">
+                  <th className="pb-2 font-normal">NAME</th>
+                  <th className="pb-2 font-normal">PHONE</th>
+                  <th className="pb-2 font-normal">PLAN</th>
+                  <th className="pb-2 font-normal">BATCH</th>
+                  <th className="pb-2 font-normal">JOINED</th>
+                </tr>
+              </thead>
+              <tbody>
+                {newMembers.members.map((m: any) => (
+                  <tr key={m.id} className="border-t border-black/5">
+                    <td className="py-2 font-medium">{m.name}</td>
+                    <td className="text-gray-500">{m.phone ?? '—'}</td>
+                    <td>{formatPlan(m.plan)}</td>
+                    <td>{m.batch}</td>
+                    <td className="text-gray-500">{formatDate(m.joinedAt)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       <div className="bg-card rounded-xl p-5 border border-black/5">

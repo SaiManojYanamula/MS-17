@@ -10,13 +10,13 @@ export class PaymentsController {
   @Get()
   @Roles('TENANT_OWNER', 'BRANCH_MANAGER', 'STAFF')
   findAll(@Req() req: TenantRequest, @Query('status') status?: 'PAID' | 'PENDING' | 'REFUNDED') {
-    return this.paymentsService.findAll(req.tenantId!, status);
+    return this.paymentsService.findAll(req.tenantId!, req.branchId!, status);
   }
 
   @Get('summary')
   @Roles('TENANT_OWNER', 'BRANCH_MANAGER', 'STAFF')
   summary(@Req() req: TenantRequest) {
-    return this.paymentsService.summary(req.tenantId!);
+    return this.paymentsService.summary(req.tenantId!, req.branchId!);
   }
 
   @Post()

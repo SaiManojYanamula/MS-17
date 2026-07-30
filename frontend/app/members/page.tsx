@@ -6,10 +6,12 @@ import TopBar from '@/components/TopBar';
 import StatusPill from '@/components/StatusPill';
 import AddMemberModal from '@/components/AddMemberModal';
 import EditMemberModal from '@/components/EditMemberModal';
+import ImportMembersModal from '@/components/ImportMembersModal';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { mockMembers, mockMemberCounts } from '@/lib/mockData';
 import { formatDate, formatPlan, seatNumberOf } from '@/lib/format';
+import { downloadCsv } from '@/lib/csv';
 
 const tabs = [
   { key: 'all', label: 'All' },
@@ -21,11 +23,13 @@ const tabs = [
 export default function MembersPage() {
   const { hasRole } = useAuth();
   const canDelete = hasRole('TENANT_OWNER', 'BRANCH_MANAGER');
+  const canImport = hasRole('TENANT_OWNER', 'BRANCH_MANAGER');
   const [filter, setFilter] = useState<'all' | 'active' | 'expiring' | 'expired'>('all');
   const [search, setSearch] = useState('');
   const [members, setMembers] = useState(mockMembers);
   const [counts, setCounts] = useState(mockMemberCounts);
   const [showAdd, setShowAdd] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const [editingMember, setEditingMember] = useState<any>(null);
   const [error, setError] = useState('');
   const highlightId = useSearchParams().get('highlight');
@@ -44,6 +48,24 @@ export default function MembersPage() {
     const t = setTimeout(refetch, 300); // debounce search-as-you-type
     return () => clearTimeout(t);
   }, [filter, search]);
+
+  const exportCsv = () => {
+    downloadCsv(
+      `members-${filter}-${new Date().toISOString().slice(0, 10)}.csv`,
+      [
+        { header: 'Name', key: 'name' },
+        { header: 'Phone', key: 'phone' },
+        { header: 'Goal', key: 'goalTag' },
+        { header: 'Plan', key: 'plan' },
+        { header: 'Batch', key: 'batch' },
+        { header: 'Seat', key: 'seatNumber' },
+        { header: 'Status', key: 'status' },
+        { header: 'Joined', key: 'joinedAt' },
+        { header: 'Expires', key: 'expiresAt' },
+      ],
+      members.map((m: any) => ({ ...m, seatNumber: seatNumberOf(m.seat) })),
+    );
+  };
 
   const deleteMember = async (m: any) => {
     if (!window.confirm(`Delete ${m.name}? This also removes their payment history and frees their seat.`)) {
@@ -67,6 +89,20 @@ export default function MembersPage() {
         </div>
         <div className="flex items-center gap-3">
           <TopBar value={search} onChange={setSearch} />
+          <button
+            onClick={exportCsv}
+            className="border border-black/10 text-sm px-4 py-2 rounded-lg shrink-0"
+          >
+            Export CSV
+          </button>
+          {canImport && (
+            <button
+              onClick={() => setShowImport(true)}
+              className="border border-black/10 text-sm px-4 py-2 rounded-lg shrink-0"
+            >
+              Import Students
+            </button>
+          )}
           <button
             onClick={() => setShowAdd(true)}
             className="bg-sidebar text-white text-sm px-4 py-2 rounded-lg shadow-sm shadow-accent/20 shrink-0"
@@ -178,6 +214,7 @@ export default function MembersPage() {
       </div>
 
       {showAdd && <AddMemberModal onClose={() => setShowAdd(false)} onSuccess={refetch} />}
+      {showImport && <ImportMembersModal onClose={() => setShowImport(false)} onSuccess={refetch} />}
       {editingMember && (
         <EditMemberModal
           member={editingMember}

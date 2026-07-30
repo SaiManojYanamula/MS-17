@@ -5,20 +5,22 @@ import { extname } from 'path';
 import { ExpensesService } from './expenses.service';
 import { TenantRequest } from '../common/middleware/tenant.middleware';
 import { Roles } from '../common/decorators/roles.decorator';
+import { RequireFeature } from '../common/decorators/require-feature.decorator';
 
 @Controller('expenses')
 @Roles('TENANT_OWNER', 'BRANCH_MANAGER', 'STAFF')
+@RequireFeature('EXPENSES')
 export class ExpensesController {
   constructor(private expensesService: ExpensesService) {}
 
   @Get()
   findAll(@Req() req: TenantRequest) {
-    return this.expensesService.findAll(req.tenantId!);
+    return this.expensesService.findAll(req.tenantId!, req.branchId!);
   }
 
   @Get('summary')
   summary(@Req() req: TenantRequest) {
-    return this.expensesService.summary(req.tenantId!);
+    return this.expensesService.summary(req.tenantId!, req.branchId!);
   }
 
   @Post()

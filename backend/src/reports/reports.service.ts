@@ -6,21 +6,21 @@ export class ReportsService {
   constructor(private prisma: PrismaService) {}
 
   // Powers the Dashboard's 4 top stat cards + seating mini-grid + revenue widget
-  async dashboardStats(tenantId: string) {
+  async dashboardStats(tenantId: string, branchId: string) {
     const [activeMembers, totalSeats, occupiedSeats, pendingApplications, revenueThisMonth] =
       await Promise.all([
         // "Active" = not expired and not within the 7-day expiring-soon window —
         // derived from expiresAt, never from the stale stored status column.
         this.prisma.member.count({
-          where: { tenantId, expiresAt: { gt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) } },
+          where: { tenantId, branchId, expiresAt: { gt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) } },
         }),
-        this.prisma.seat.count({ where: { tenantId } }),
-        this.prisma.seat.count({ where: { tenantId, status: 'OCCUPIED' } }),
-        this.prisma.application.count({ where: { tenantId, status: 'PENDING' } }),
-        this.monthRevenue(tenantId, 0),
+        this.prisma.seat.count({ where: { tenantId, branchId } }),
+        this.prisma.seat.count({ where: { tenantId, branchId, status: 'OCCUPIED' } }),
+        this.prisma.application.count({ where: { tenantId, branchId, status: 'PENDING' } }),
+        this.monthRevenue(tenantId, branchId, 0),
       ]);
 
-    const lastMonthRevenue = await this.monthRevenue(tenantId, 1);
+    const lastMonthRevenue = await this.monthRevenue(tenantId, branchId, 1);
     const revenueChangePct = lastMonthRevenue
       ? Math.round(((revenueThisMonth - lastMonthRevenue) / lastMonthRevenue) * 100)
       : 0;
@@ -35,16 +35,28 @@ export class ReportsService {
     };
   }
 
-  async recentActivity(tenantId: string, limit = 5) {
+  // Who joined recently — quick answer to "how many new members this week"
+  // without digging through the full Members list. `days` picks the window.
+  async newMembersThisWeek(tenantId: string, branchId: string, days = 7) {
+    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+    const members = await this.prisma.member.findMany({
+      where: { tenantId, branchId, joinedAt: { gte: since } },
+      select: { id: true, name: true, phone: true, plan: true, batch: true, joinedAt: true },
+      orderBy: { joinedAt: 'desc' },
+    });
+    return { count: members.length, members };
+  }
+
+  async recentActivity(tenantId: string, branchId: string, limit = 5) {
     const [payments, applications] = await Promise.all([
       this.prisma.payment.findMany({
-        where: { tenantId },
+        where: { tenantId, branchId },
         include: { member: true },
         orderBy: { createdAt: 'desc' },
         take: limit,
       }),
       this.prisma.application.findMany({
-        where: { tenantId },
+        where: { tenantId, branchId },
         orderBy: { appliedAt: 'desc' },
         take: limit,
       }),
@@ -69,10 +81,10 @@ export class ReportsService {
   }
 
   // Revenue — last N months, matches "Revenue - Last 6 Months" bar chart
-  async revenueTrend(tenantId: string, months = 6) {
+  async revenueTrend(tenantId: string, branchId: string, months = 6) {
     const results: { month: string; total: number }[] = [];
     for (let i = months - 1; i >= 0; i--) {
-      const total = await this.monthRevenue(tenantId, i);
+      const total = await this.monthRevenue(tenantId, branchId, i);
       const d = new Date();
       d.setMonth(d.getMonth() - i);
       results.push({ month: d.toLocaleString('default', { month: 'short' }), total });
@@ -81,8 +93,8 @@ export class ReportsService {
   }
 
   // Occupancy trend — last N weeks, matches "Occupancy Trend - Last 8 Weeks"
-  async occupancyTrend(tenantId: string, weeks = 8) {
-    const totalSeats = await this.prisma.seat.count({ where: { tenantId } });
+  async occupancyTrend(tenantId: string, branchId: string, weeks = 8) {
+    const totalSeats = await this.prisma.seat.count({ where: { tenantId, branchId } });
     const results: { week: string; occupiedPct: number }[] = [];
 
     for (let i = weeks - 1; i >= 0; i--) {
@@ -91,7 +103,7 @@ export class ReportsService {
 
       // Members whose membership was active as of that week (joined before, expires after)
       const activeThatWeek = await this.prisma.member.count({
-        where: { tenantId, joinedAt: { lte: weekEnd }, expiresAt: { gte: weekEnd } },
+        where: { tenantId, branchId, joinedAt: { lte: weekEnd }, expiresAt: { gte: weekEnd } },
       });
 
       results.push({
@@ -104,10 +116,10 @@ export class ReportsService {
   }
 
   // Plan Distribution donut chart
-  async planDistribution(tenantId: string) {
+  async planDistribution(tenantId: string, branchId: string) {
     const grouped = await this.prisma.member.groupBy({
       by: ['plan'],
-      where: { tenantId },
+      where: { tenantId, branchId },
       _count: { plan: true },
     });
 
@@ -121,11 +133,11 @@ export class ReportsService {
   }
 
   // Key Numbers panel
-  async keyNumbers(tenantId: string) {
-    const totalMembersAllTime = await this.prisma.member.count({ where: { tenantId } });
+  async keyNumbers(tenantId: string, branchId: string) {
+    const totalMembersAllTime = await this.prisma.member.count({ where: { tenantId, branchId } });
 
     const members = await this.prisma.member.findMany({
-      where: { tenantId },
+      where: { tenantId, branchId },
       select: { joinedAt: true, expiresAt: true, batch: true, goalTag: true },
     });
 
@@ -153,7 +165,7 @@ export class ReportsService {
     const mostCommonGoal = Object.entries(goalCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? '-';
 
     const expiredCount = await this.prisma.member.count({
-      where: { tenantId, expiresAt: { lt: new Date() } },
+      where: { tenantId, branchId, expiresAt: { lt: new Date() } },
     });
     const renewalRate = totalMembersAllTime > 0
       ? Math.round(((totalMembersAllTime - expiredCount) / totalMembersAllTime) * 100)
@@ -168,13 +180,13 @@ export class ReportsService {
     };
   }
 
-  private async monthRevenue(tenantId: string, monthsAgo: number) {
+  private async monthRevenue(tenantId: string, branchId: string, monthsAgo: number) {
     const now = new Date();
     const start = new Date(now.getFullYear(), now.getMonth() - monthsAgo, 1);
     const end = new Date(now.getFullYear(), now.getMonth() - monthsAgo + 1, 1);
 
     const agg = await this.prisma.payment.aggregate({
-      where: { tenantId, status: 'PAID', createdAt: { gte: start, lt: end } },
+      where: { tenantId, branchId, status: 'PAID', createdAt: { gte: start, lt: end } },
       _sum: { amount: true },
     });
 

@@ -10,13 +10,13 @@ export class ApplicationsController {
   @Get()
   @Roles('TENANT_OWNER', 'BRANCH_MANAGER', 'STAFF')
   findAll(@Req() req: TenantRequest, @Query('status') status?: 'PENDING' | 'APPROVED' | 'REJECTED') {
-    return this.applicationsService.findAll(req.tenantId!, status);
+    return this.applicationsService.findAll(req.tenantId!, req.branchId!, status);
   }
 
   @Get('pending-count')
   @Roles('TENANT_OWNER', 'BRANCH_MANAGER', 'STAFF')
   pendingCount(@Req() req: TenantRequest) {
-    return this.applicationsService.pendingCount(req.tenantId!);
+    return this.applicationsService.pendingCount(req.tenantId!, req.branchId!);
   }
 
   @Post()

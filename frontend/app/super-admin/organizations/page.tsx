@@ -9,6 +9,7 @@ import { formatDate } from '@/lib/format';
 
 export default function OrganizationsPage() {
   const [orgs, setOrgs] = useState<any[]>([]);
+  const [usage, setUsage] = useState<Record<string, { messagesThisMonth: number; messagesAllTime: number }>>({});
   const [search, setSearch] = useState('');
   const [showAdd, setShowAdd] = useState(false);
   const [editingOrg, setEditingOrg] = useState<any>(null);
@@ -16,6 +17,16 @@ export default function OrganizationsPage() {
 
   const refetch = () => {
     api.organizations().then(setOrgs).catch(() => setError('Could not load organizations'));
+    api
+      .whatsappUsage()
+      .then((rows: any[]) => {
+        const map: Record<string, { messagesThisMonth: number; messagesAllTime: number }> = {};
+        rows.forEach((r) => {
+          map[r.tenantId] = { messagesThisMonth: r.messagesThisMonth, messagesAllTime: r.messagesAllTime };
+        });
+        setUsage(map);
+      })
+      .catch(() => {});
   };
 
   useEffect(() => {
@@ -54,6 +65,7 @@ export default function OrganizationsPage() {
               <th className="font-normal">BRANCHES</th>
               <th className="font-normal">USERS</th>
               <th className="font-normal">MEMBERS</th>
+              <th className="font-normal">WHATSAPP</th>
               <th className="font-normal">CREATED</th>
               <th className="font-normal">ACTIONS</th>
             </tr>
@@ -78,6 +90,18 @@ export default function OrganizationsPage() {
                 <td>{o.branches?.length ?? 0}</td>
                 <td>{o._count?.users ?? 0}</td>
                 <td>{o._count?.members ?? 0}</td>
+                <td>
+                  <span
+                    className={`text-[10px] rounded-full px-2 py-0.5 ${
+                      o.whatsappAccessEnabled ? 'bg-free/20 text-free' : 'bg-gray-200 text-gray-500'
+                    }`}
+                  >
+                    {o.whatsappAccessEnabled ? 'Enabled' : 'Off'}
+                  </span>
+                  <div className="text-[10px] text-gray-400 mt-0.5">
+                    {usage[o.id]?.messagesThisMonth ?? 0} this month · {usage[o.id]?.messagesAllTime ?? 0} total
+                  </div>
+                </td>
                 <td>{formatDate(o.createdAt)}</td>
                 <td className="p-4">
                   <button
@@ -91,7 +115,7 @@ export default function OrganizationsPage() {
             ))}
             {visible.length === 0 && (
               <tr>
-                <td colSpan={8} className="p-8 text-center text-gray-400">
+                <td colSpan={9} className="p-8 text-center text-gray-400">
                   No organizations match.
                 </td>
               </tr>

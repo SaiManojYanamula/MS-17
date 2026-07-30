@@ -1,32 +1,32 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 
 @Injectable()
 export class PaymentsService {
   constructor(private prisma: PrismaService) {}
 
-  async findAll(tenantId: string, status?: 'PAID' | 'PENDING' | 'REFUNDED') {
+  async findAll(tenantId: string, branchId: string, status?: 'PAID' | 'PENDING' | 'REFUNDED') {
     return this.prisma.payment.findMany({
-      where: { tenantId, ...(status ? { status } : {}) },
+      where: { tenantId, branchId, ...(status ? { status } : {}) },
       include: { member: true },
       orderBy: { createdAt: 'desc' },
     });
   }
 
-  async summary(tenantId: string) {
+  async summary(tenantId: string, branchId: string) {
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
     const [collectedAgg, pendingAgg, txCount] = await Promise.all([
       this.prisma.payment.aggregate({
-        where: { tenantId, status: 'PAID', createdAt: { gte: monthStart } },
+        where: { tenantId, branchId, status: 'PAID', createdAt: { gte: monthStart } },
         _sum: { amount: true },
       }),
       this.prisma.payment.aggregate({
-        where: { tenantId, status: 'PENDING' },
+        where: { tenantId, branchId, status: 'PENDING' },
         _sum: { amount: true },
       }),
-      this.prisma.payment.count({ where: { tenantId } }),
+      this.prisma.payment.count({ where: { tenantId, branchId } }),
     ]);
 
     const collected = collectedAgg._sum.amount ?? 0;
@@ -46,6 +46,9 @@ export class PaymentsService {
   }
 
   async refund(tenantId: string, id: string) {
+    const payment = await this.prisma.payment.findFirst({ where: { id, tenantId } });
+    if (!payment) throw new NotFoundException('Payment not found');
+
     return this.prisma.payment.update({
       where: { id },
       data: { status: 'REFUNDED' },

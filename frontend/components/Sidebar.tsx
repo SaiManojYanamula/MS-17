@@ -23,19 +23,19 @@ const overviewLinks = [
   { href: '/dashboard', label: 'Dashboard', icon: DashboardIcon },
   { href: '/applications', label: 'Applications', icon: InboxIcon, badgeKey: 'pending' },
   { href: '/members', label: 'Members', icon: UsersIcon },
-  { href: '/seating', label: 'Seating', icon: SeatingIcon },
+  { href: '/seating', label: 'Seating', icon: SeatingIcon, feature: 'SEATING' },
   { href: '/payments', label: 'Payments', icon: PaymentsIcon },
-  { href: '/expenses', label: 'Expenses', icon: ExpensesIcon },
-  { href: '/portal/notices', label: 'Notices', icon: BellIcon },
-  { href: '/portal/requests', label: 'Requests', icon: RequestIcon, badgeKey: 'requests' },
-  { href: '/reports', label: 'Reports', icon: ReportsIcon },
+  { href: '/expenses', label: 'Expenses', icon: ExpensesIcon, feature: 'EXPENSES' },
+  { href: '/portal/notices', label: 'Notices', icon: BellIcon, feature: 'NOTICES' },
+  { href: '/portal/requests', label: 'Requests', icon: RequestIcon, badgeKey: 'requests', feature: 'REQUESTS' },
+  { href: '/reports', label: 'Reports', icon: ReportsIcon, feature: 'REPORTS' },
 ];
 
 const systemLinks = [{ href: '/settings', label: 'Settings', icon: SettingsIcon, roles: ['TENANT_OWNER'] }];
 
 export default function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: () => void }) {
   const pathname = usePathname();
-  const { user, logout } = useAuth();
+  const { user, logout, branches, activeBranchId, switchBranch, enabledFeatures } = useAuth();
   const [pendingCount, setPendingCount] = useState(0);
   const [openRequestCount, setOpenRequestCount] = useState(0);
 
@@ -78,6 +78,9 @@ export default function Sidebar({ open = false, onClose }: { open?: boolean; onC
     );
   };
 
+  const visibleOverviewLinks = overviewLinks.filter(
+    (l) => !l.feature || !enabledFeatures || enabledFeatures.includes(l.feature),
+  );
   const visibleSystemLinks = systemLinks.filter((l) => !l.roles || (user && l.roles.includes(user.role)));
 
   const initials = user?.name
@@ -103,7 +106,7 @@ export default function Sidebar({ open = false, onClose }: { open?: boolean; onC
       </div>
 
       <div className="text-[10px] tracking-widest text-gray-400 px-2 mb-2">OVERVIEW</div>
-      {overviewLinks.map(renderLink)}
+      {visibleOverviewLinks.map(renderLink)}
 
       {visibleSystemLinks.length > 0 && (
         <>
@@ -113,6 +116,22 @@ export default function Sidebar({ open = false, onClose }: { open?: boolean; onC
       )}
 
       <div className="mt-auto pt-4 border-t border-black/10 px-2">
+        {branches.length > 1 && (
+          <div className="mb-3">
+            <div className="text-[10px] tracking-widest text-gray-400 mb-1">BRANCH</div>
+            <select
+              value={activeBranchId ?? ''}
+              onChange={(e) => switchBranch(e.target.value)}
+              className="w-full border border-black/10 rounded-lg px-2 py-1.5 text-sm bg-white"
+            >
+              {branches.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
         <div className="flex items-center gap-2 mb-2">
           <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center text-xs font-semibold text-white shrink-0">
             {initials}

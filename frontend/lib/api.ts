@@ -6,8 +6,22 @@ function getToken() {
   return localStorage.getItem('accessToken');
 }
 
+// The branch a multi-branch user is currently "switched into" — sent as a
+// header so the backend can act on a branch other than the one baked into
+// their JWT (see tenant.middleware.ts). Owners can switch to any branch in
+// their org; managers/staff only to branches they were explicitly granted.
+export function getActiveBranchId() {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem('activeBranchId');
+}
+
+export function setActiveBranchId(branchId: string) {
+  localStorage.setItem('activeBranchId', branchId);
+}
+
 async function request(path: string, options: RequestInit = {}) {
   const token = getToken();
+  const activeBranchId = getActiveBranchId();
   const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
 
   const res = await fetch(`${API_BASE}${path}`, {
@@ -15,6 +29,7 @@ async function request(path: string, options: RequestInit = {}) {
     headers: {
       ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(activeBranchId ? { 'x-branch-id': activeBranchId } : {}),
       ...options.headers,
     },
   });
@@ -37,6 +52,7 @@ export const api = {
   occupancyTrend: (weeks = 8) => request(`/reports/occupancy-trend?weeks=${weeks}`),
   planDistribution: () => request('/reports/plan-distribution'),
   keyNumbers: () => request('/reports/key-numbers'),
+  newMembersThisWeek: (days = 7) => request(`/reports/new-members?days=${days}`),
 
   applications: (status?: string) =>
     request(`/applications${status ? `?status=${status}` : ''}`),
@@ -55,6 +71,37 @@ export const api = {
     formData.append('batch', data.batch);
     formData.append('aadharCard', data.aadharCard);
     return request(`/public/apply/${slug}`, { method: 'POST', body: formData });
+  },
+
+  // Self-service QR booking flow — welcome page, branch picker, live seats, book+pay.
+  publicTenant: (slug: string) => request(`/public/tenant/${slug}`),
+  publicSeats: (slug: string, branchId: string) => request(`/public/seats/${slug}/${branchId}`),
+  publicBook: (data: {
+    slug: string;
+    branchId: string;
+    seatId: string;
+    name: string;
+    phone: string;
+    goalTag?: string;
+    plan: string;
+    batch: string;
+    amount?: number;
+    method?: string;
+    aadharCard: File;
+  }) => {
+    const formData = new FormData();
+    formData.append('slug', data.slug);
+    formData.append('branchId', data.branchId);
+    formData.append('seatId', data.seatId);
+    formData.append('name', data.name);
+    formData.append('phone', data.phone);
+    if (data.goalTag) formData.append('goalTag', data.goalTag);
+    formData.append('plan', data.plan);
+    formData.append('batch', data.batch);
+    if (data.amount) formData.append('amount', String(data.amount));
+    if (data.method) formData.append('method', data.method);
+    formData.append('aadharCard', data.aadharCard);
+    return request('/public/book', { method: 'POST', body: formData });
   },
 
   members: (filter?: string, search?: string) => {
@@ -80,15 +127,25 @@ export const api = {
     expiresAt: string;
   }>) => request(`/members/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
   deleteMember: (id: string) => request(`/members/${id}`, { method: 'DELETE' }),
+  importMembers: (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return request('/members/import', { method: 'POST', body: formData });
+  },
   myMember: () => request('/members/me'),
+  resetMemberPassword: (id: string, password: string) =>
+    request(`/members/${id}/reset-password`, { method: 'PATCH', body: JSON.stringify({ password }) }),
 
   seatMap: (branchId?: string) => request(`/seating${branchId ? `?branchId=${branchId}` : ''}`),
   seatDetail: (seatId: string) => request(`/seating/${seatId}`),
   assignSeat: (seatId: string, memberId: string) =>
     request(`/seating/${seatId}/assign`, { method: 'PATCH', body: JSON.stringify({ memberId }) }),
   releaseSeat: (seatId: string) => request(`/seating/${seatId}/release`, { method: 'PATCH' }),
+  deleteSeat: (seatId: string) => request(`/seating/${seatId}`, { method: 'DELETE' }),
   createZone: (data: { name: string; startSeat: number; endSeat: number }) =>
     request('/seating/zones', { method: 'POST', body: JSON.stringify(data) }),
+  addSeatsToZone: (zoneId: string, count: number) =>
+    request(`/seating/zones/${zoneId}/seats`, { method: 'POST', body: JSON.stringify({ count }) }),
 
   payments: (status?: string) => request(`/payments${status ? `?status=${status}` : ''}`),
   paymentsSummary: () => request('/payments/summary'),
@@ -107,13 +164,41 @@ export const api = {
     return request('/expenses', { method: 'POST', body: formData });
   },
 
-  inviteStaff: (data: { name: string; email: string; password: string; role: string; branchId?: string }) =>
-    request('/auth/register', { method: 'POST', body: JSON.stringify(data) }),
+  inviteStaff: (data: {
+    name: string;
+    email: string;
+    password: string;
+    role: string;
+    branchId?: string;
+    branchIds?: string[];
+  }) => request('/auth/register', { method: 'POST', body: JSON.stringify(data) }),
 
   myTenant: () => request('/tenants/me'),
-  updateTenant: (name: string) => request('/tenants/me', { method: 'PATCH', body: JSON.stringify({ name }) }),
+  updateTenant: (data: {
+    name?: string;
+    upiId?: string;
+    upiPhone?: string;
+    notifyExpiry?: boolean;
+    notifyPayments?: boolean;
+    notifyWhatsapp?: boolean;
+  }) =>
+    request('/tenants/me', { method: 'PATCH', body: JSON.stringify(data) }),
+  uploadTenantCover: (cover: File) => {
+    const formData = new FormData();
+    formData.append('cover', cover);
+    return request('/tenants/me/cover', { method: 'POST', body: formData });
+  },
   updateBranch: (branchId: string, data: { name?: string; address?: string }) =>
     request(`/tenants/branches/${branchId}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  // Branches the current user can access — all of them for a TENANT_OWNER,
+  // only the assigned subset for BRANCH_MANAGER/STAFF.
+  myBranches: () => request('/tenants/branches'),
+  addBranch: (data: { name: string; address?: string }) =>
+    request('/tenants/branches', { method: 'POST', body: JSON.stringify(data) }),
+  // Staff/owner accounts in the current tenant (students are managed via Members).
+  myUsers: () => request('/tenants/users'),
+  resetUserPassword: (id: string, password: string) =>
+    request(`/tenants/users/${id}/reset-password`, { method: 'PATCH', body: JSON.stringify({ password }) }),
 
   // Super Admin — platform-wide, cross-tenant
   organizations: () => request('/super-admin/organizations'),
@@ -125,8 +210,18 @@ export const api = {
     ownerEmail: string;
     ownerPassword: string;
   }) => request('/super-admin/organizations', { method: 'POST', body: JSON.stringify(data) }),
-  updateOrganization: (id: string, data: { name?: string; plan?: string; status?: string }) =>
+  updateOrganization: (
+    id: string,
+    data: {
+      name?: string;
+      plan?: string;
+      status?: string;
+      whatsappAccessEnabled?: boolean;
+      enabledFeatures?: string[];
+    },
+  ) =>
     request(`/super-admin/organizations/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  whatsappUsage: () => request('/super-admin/whatsapp-usage'),
 
   superAdminBranches: () => request('/super-admin/branches'),
   createSuperAdminBranch: (data: { tenantId: string; name: string; address?: string }) =>
@@ -145,6 +240,8 @@ export const api = {
   }) => request('/super-admin/users', { method: 'POST', body: JSON.stringify(data) }),
   updatePlatformUser: (id: string, data: { role?: string; isActive?: boolean }) =>
     request(`/super-admin/users/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  resetPlatformUserPassword: (id: string, password: string) =>
+    request(`/super-admin/users/${id}/reset-password`, { method: 'PATCH', body: JSON.stringify({ password }) }),
 
   // Attendance
   myAttendance: () => request('/attendance/me'),

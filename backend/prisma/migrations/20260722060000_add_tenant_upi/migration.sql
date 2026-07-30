@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE `Tenant` ADD COLUMN `upiId` VARCHAR(191) NULL,
+    ADD COLUMN `upiPhone` VARCHAR(191) NULL;

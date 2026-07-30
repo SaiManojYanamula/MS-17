@@ -1,9 +1,28 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
+import * as XLSX from 'xlsx';
 import { PrismaService } from '../prisma.service';
 
 const DEFAULT_STUDENT_PASSWORD = '1234';
 const SOON_WINDOW_MS = 7 * 24 * 60 * 60 * 1000; // 7-day "expiring soon" window
+// Indian mobile number: 10 digits, optionally prefixed with +91 / 0.
+const PHONE_PATTERN = /^(\+?91[-\s]?|0)?[6-9]\d{9}$/;
+const PLAN_ALIASES: Record<string, string> = {
+  MONTHLY: 'MONTHLY',
+  MONTH: 'MONTHLY',
+  QUARTERLY: 'QUARTERLY',
+  QUARTER: 'QUARTERLY',
+  DAILY: 'DAILY_PASS',
+  DAILYPASS: 'DAILY_PASS',
+  DAILY_PASS: 'DAILY_PASS',
+  'DAILY PASS': 'DAILY_PASS',
+};
+
+function assertValidPhone(phone?: string) {
+  if (phone && !PHONE_PATTERN.test(phone.trim())) {
+    throw new BadRequestException('Enter a valid 10-digit phone number');
+  }
+}
 
 @Injectable()
 export class MembersService {
@@ -23,11 +42,16 @@ export class MembersService {
   }
 
   // tenantId is ALWAYS required — this is the row-level isolation enforcement point
-  async findAll(tenantId: string, filter?: 'active' | 'expiring' | 'expired', search?: string) {
+  async findAll(
+    tenantId: string,
+    branchId: string,
+    filter?: 'active' | 'expiring' | 'expired',
+    search?: string,
+  ) {
     const now = new Date();
     const soon = new Date(now.getTime() + SOON_WINDOW_MS);
 
-    const where: any = { tenantId };
+    const where: any = { tenantId, branchId };
 
     if (filter === 'active') where.expiresAt = { gt: soon };
     if (filter === 'expiring') where.expiresAt = { gte: now, lte: soon };
@@ -43,22 +67,22 @@ export class MembersService {
       orderBy: { joinedAt: 'desc' },
     });
 
-    const counts = await this.getCounts(tenantId);
+    const counts = await this.getCounts(tenantId, branchId);
 
     return { members: members.map((m) => this.withComputedStatus(m)), counts };
   }
 
-  async getCounts(tenantId: string) {
+  async getCounts(tenantId: string, branchId: string) {
     const now = new Date();
     const soon = new Date(now.getTime() + SOON_WINDOW_MS);
 
     const [all, active, expiring, expired] = await Promise.all([
-      this.prisma.member.count({ where: { tenantId } }),
-      this.prisma.member.count({ where: { tenantId, expiresAt: { gt: soon } } }),
+      this.prisma.member.count({ where: { tenantId, branchId } }),
+      this.prisma.member.count({ where: { tenantId, branchId, expiresAt: { gt: soon } } }),
       this.prisma.member.count({
-        where: { tenantId, expiresAt: { gte: now, lte: soon } },
+        where: { tenantId, branchId, expiresAt: { gte: now, lte: soon } },
       }),
-      this.prisma.member.count({ where: { tenantId, expiresAt: { lt: now } } }),
+      this.prisma.member.count({ where: { tenantId, branchId, expiresAt: { lt: now } } }),
     ]);
 
     return { all, active, expiring, expired };
@@ -90,6 +114,7 @@ export class MembersService {
   }
 
   async create(tenantId: string, branchId: string, data: any) {
+    assertValidPhone(data.phone);
     const displayId = await this.generateDisplayId(tenantId);
     const joinedAt = data.joinedAt ? new Date(data.joinedAt) : new Date();
     const expiresAt = this.computeExpiry(data.plan, joinedAt);
@@ -114,12 +139,30 @@ export class MembersService {
   }
 
   async update(tenantId: string, id: string, data: any) {
+    assertValidPhone(data.phone);
     const existing = await this.findOne(tenantId, id); // ensures tenant ownership before mutating
     const member = await this.prisma.member.update({ where: { id }, data });
     if (member.phone && !existing.user) {
       await this.createLoginIfMissing(tenantId, existing.branchId, member.id, member.name, member.phone);
     }
     return this.findOne(tenantId, id);
+  }
+
+  async resetLoginPassword(tenantId: string, memberId: string, newPassword: string) {
+    if (!newPassword || newPassword.length < 6) {
+      throw new BadRequestException('Password must be at least 6 characters');
+    }
+
+    const member = await this.prisma.member.findFirst({
+      where: { id: memberId, tenantId },
+      include: { user: true },
+    });
+    if (!member) throw new NotFoundException('Member not found');
+    if (!member.user) throw new BadRequestException('This member does not have a login yet');
+
+    const hashed = await bcrypt.hash(newPassword, 10);
+    await this.prisma.user.update({ where: { id: member.user.id }, data: { password: hashed } });
+    return { success: true };
   }
 
   // Every member with a phone number gets a STUDENT portal login automatically
@@ -142,6 +185,86 @@ export class MembersService {
     } catch {
       // unique constraint on email(phone) — leave the member without a login
     }
+  }
+
+  // Bulk-onboard old/existing students from an Excel/CSV file an owner
+  // already keeps their records in — one row per student, no Aadhar upload
+  // (that's only enforced on the public self-service booking flow).
+  async importFromSpreadsheet(tenantId: string, branchId: string, buffer: Buffer) {
+    // cellDates: true — otherwise a real date cell comes through as a raw
+    // Excel serial number (e.g. 46037), which strings straight into
+    // `new Date("46037")` and V8 reads as the literal year 46037.
+    const workbook = XLSX.read(buffer, { type: 'buffer', cellDates: true });
+    const firstSheet = workbook.SheetNames[0];
+    if (!firstSheet) throw new BadRequestException('Spreadsheet has no sheets');
+
+    const rows = XLSX.utils.sheet_to_json<Record<string, any>>(workbook.Sheets[firstSheet], {
+      defval: '',
+    });
+    if (rows.length === 0) throw new BadRequestException('Spreadsheet has no rows');
+
+    const errors: { row: number; reason: string }[] = [];
+    let created = 0;
+
+    for (let i = 0; i < rows.length; i++) {
+      const rowNumber = i + 2; // +1 for header row, +1 for 1-indexing
+      const raw = rows[i];
+      const normalizedRow: Record<string, any> = {};
+      for (const k of Object.keys(raw)) normalizedRow[k.trim().toLowerCase()] = raw[k];
+
+      // Column headers matched case/space-insensitively so a human-typed
+      // Excel sheet ("Phone Number", "phone", "PHONE") all just work.
+      const get = (...keys: string[]) => {
+        for (const key of keys) {
+          const v = normalizedRow[key];
+          if (v !== undefined && v !== '') return String(v).trim();
+        }
+        return '';
+      };
+
+      const name = get('name', 'student name', 'full name');
+      const phone = get('phone', 'phone number', 'mobile');
+      const planRaw = get('plan').toUpperCase();
+      const batch = get('batch', 'batch/shift', 'shift');
+      const goalTag = get('goal', 'goal tag', 'goaltag') || undefined;
+      const joinedCell =
+        normalizedRow['joined'] ?? normalizedRow['joined date'] ?? normalizedRow['joinedat'] ?? normalizedRow['join date'];
+
+      if (!name) {
+        errors.push({ row: rowNumber, reason: 'Missing name' });
+        continue;
+      }
+      if (!phone || !PHONE_PATTERN.test(phone)) {
+        errors.push({ row: rowNumber, reason: 'Missing/invalid phone number' });
+        continue;
+      }
+      const plan = PLAN_ALIASES[planRaw];
+      if (!plan) {
+        errors.push({ row: rowNumber, reason: `Plan must be Monthly, Quarterly or Daily Pass (got "${planRaw}")` });
+        continue;
+      }
+      if (!batch) {
+        errors.push({ row: rowNumber, reason: 'Missing batch' });
+        continue;
+      }
+
+      let joinedAt: string | undefined;
+      if (joinedCell instanceof Date) {
+        if (!isNaN(joinedCell.getTime())) joinedAt = joinedCell.toISOString();
+      } else if (joinedCell) {
+        const parsed = new Date(String(joinedCell).trim());
+        if (!isNaN(parsed.getTime())) joinedAt = parsed.toISOString();
+      }
+
+      try {
+        await this.create(tenantId, branchId, { name, phone, goalTag, plan, batch, joinedAt });
+        created++;
+      } catch (err: any) {
+        errors.push({ row: rowNumber, reason: err.message || 'Could not create this student' });
+      }
+    }
+
+    return { created, failed: errors.length, errors };
   }
 
   async remove(tenantId: string, id: string) {

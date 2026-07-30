@@ -5,15 +5,15 @@ import { PrismaService } from '../prisma.service';
 export class ApplicationsService {
   constructor(private prisma: PrismaService) {}
 
-  async findAll(tenantId: string, status?: 'PENDING' | 'APPROVED' | 'REJECTED') {
+  async findAll(tenantId: string, branchId: string, status?: 'PENDING' | 'APPROVED' | 'REJECTED') {
     return this.prisma.application.findMany({
-      where: { tenantId, ...(status ? { status } : {}) },
+      where: { tenantId, branchId, ...(status ? { status } : {}) },
       orderBy: { appliedAt: 'desc' },
     });
   }
 
-  async pendingCount(tenantId: string) {
-    return this.prisma.application.count({ where: { tenantId, status: 'PENDING' } });
+  async pendingCount(tenantId: string, branchId: string) {
+    return this.prisma.application.count({ where: { tenantId, branchId, status: 'PENDING' } });
   }
 
   async create(tenantId: string, branchId: string, data: any) {

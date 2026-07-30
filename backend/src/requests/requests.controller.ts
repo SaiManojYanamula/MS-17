@@ -2,8 +2,10 @@ import { Body, Controller, ForbiddenException, Get, Param, Patch, Post, Req } fr
 import { RequestsService } from './requests.service';
 import { TenantRequest } from '../common/middleware/tenant.middleware';
 import { Roles } from '../common/decorators/roles.decorator';
+import { RequireFeature } from '../common/decorators/require-feature.decorator';
 
 @Controller('requests')
+@RequireFeature('REQUESTS')
 export class RequestsController {
   constructor(private requestsService: RequestsService) {}
 

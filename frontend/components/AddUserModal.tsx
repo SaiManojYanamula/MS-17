@@ -109,12 +109,13 @@ export default function AddUserModal({
             />
           </div>
           <div>
-            <label className="block text-xs text-gray-500 mb-1">Temporary Password</label>
+            <label className="block text-xs text-gray-500 mb-1">Temporary Password (min 6 characters)</label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
+              minLength={6}
               className="w-full border border-black/10 rounded-lg px-3 py-2 text-sm"
             />
           </div>

@@ -1,9 +1,11 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, Req } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req } from '@nestjs/common';
 import { SeatingService } from './seating.service';
 import { TenantRequest } from '../common/middleware/tenant.middleware';
 import { Roles } from '../common/decorators/roles.decorator';
+import { RequireFeature } from '../common/decorators/require-feature.decorator';
 
 @Controller('seating')
+@RequireFeature('SEATING')
 export class SeatingController {
   constructor(private seatingService: SeatingService) {}
 
@@ -20,6 +22,16 @@ export class SeatingController {
     @Body() body: { name: string; startSeat: number; endSeat: number },
   ) {
     return this.seatingService.createZone(req.tenantId!, req.branchId!, body);
+  }
+
+  @Post('zones/:zoneId/seats')
+  @Roles('TENANT_OWNER', 'BRANCH_MANAGER')
+  addSeatsToZone(
+    @Req() req: TenantRequest,
+    @Param('zoneId') zoneId: string,
+    @Body('count') count: number,
+  ) {
+    return this.seatingService.addSeatsToZone(req.tenantId!, req.branchId!, zoneId, Number(count));
   }
 
   @Get(':seatId')
@@ -42,5 +54,11 @@ export class SeatingController {
   @Roles('TENANT_OWNER', 'BRANCH_MANAGER', 'STAFF')
   releaseSeat(@Req() req: TenantRequest, @Param('seatId') seatId: string) {
     return this.seatingService.releaseSeat(req.tenantId!, seatId);
+  }
+
+  @Delete(':seatId')
+  @Roles('TENANT_OWNER', 'BRANCH_MANAGER')
+  deleteSeat(@Req() req: TenantRequest, @Param('seatId') seatId: string) {
+    return this.seatingService.deleteSeat(req.tenantId!, seatId);
   }
 }

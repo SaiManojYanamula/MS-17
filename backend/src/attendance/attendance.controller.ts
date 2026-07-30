@@ -2,8 +2,10 @@ import { Body, Controller, ForbiddenException, Get, Post, Query, Req } from '@ne
 import { AttendanceService } from './attendance.service';
 import { TenantRequest } from '../common/middleware/tenant.middleware';
 import { Roles } from '../common/decorators/roles.decorator';
+import { RequireFeature } from '../common/decorators/require-feature.decorator';
 
 @Controller('attendance')
+@RequireFeature('ATTENDANCE')
 export class AttendanceController {
   constructor(private attendanceService: AttendanceService) {}
 
@@ -19,7 +21,7 @@ export class AttendanceController {
   @Get()
   @Roles('TENANT_OWNER', 'BRANCH_MANAGER', 'STAFF')
   findForDate(@Req() req: TenantRequest, @Query('date') date: string) {
-    return this.attendanceService.findForDate(req.tenantId!, date);
+    return this.attendanceService.findForDate(req.tenantId!, req.branchId!, date);
   }
 
   @Post()

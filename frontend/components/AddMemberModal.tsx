@@ -71,6 +71,8 @@ export default function AddMemberModal({
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               placeholder="e.g. 9876543210"
+              pattern="(\+?91[-\s]?|0)?[6-9]\d{9}"
+              title="Enter a valid 10-digit Indian phone number"
               required
               className="w-full border border-black/10 rounded-lg px-3 py-2 text-sm"
             />

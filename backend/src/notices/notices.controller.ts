@@ -2,8 +2,10 @@ import { Body, Controller, Delete, Get, Param, Post, Req } from '@nestjs/common'
 import { NoticesService } from './notices.service';
 import { TenantRequest } from '../common/middleware/tenant.middleware';
 import { Roles } from '../common/decorators/roles.decorator';
+import { RequireFeature } from '../common/decorators/require-feature.decorator';
 
 @Controller('notices')
+@RequireFeature('NOTICES')
 export class NoticesController {
   constructor(private noticesService: NoticesService) {}
 

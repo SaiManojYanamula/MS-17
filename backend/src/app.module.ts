@@ -12,7 +12,9 @@ import { ExpensesModule } from './expenses/expenses.module';
 import { AttendanceModule } from './attendance/attendance.module';
 import { NoticesModule } from './notices/notices.module';
 import { RequestsModule } from './requests/requests.module';
+import { WebhooksModule } from './webhooks/webhooks.module';
 import { TenantMiddleware } from './common/middleware/tenant.middleware';
+import { PrismaService } from './prisma.service';
 
 @Module({
   imports: [
@@ -29,18 +31,25 @@ import { TenantMiddleware } from './common/middleware/tenant.middleware';
     AttendanceModule,
     NoticesModule,
     RequestsModule,
+    WebhooksModule,
   ],
+  providers: [PrismaService],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
     // auth/register now requires an authenticated TENANT_OWNER (it's the
-    // staff-invite flow) — only login and the public QR application form
-    // stay open.
+    // staff-invite flow) — only login, the public QR application/booking
+    // routes, and Meta's WhatsApp webhook stay open.
     consumer
       .apply(TenantMiddleware)
       .exclude(
         { path: 'auth/login', method: RequestMethod.POST },
         { path: 'public/apply/:slug', method: RequestMethod.POST },
+        { path: 'public/tenant/:slug', method: RequestMethod.GET },
+        { path: 'public/seats/:slug/:branchId', method: RequestMethod.GET },
+        { path: 'public/book', method: RequestMethod.POST },
+        { path: 'webhooks/whatsapp', method: RequestMethod.GET },
+        { path: 'webhooks/whatsapp', method: RequestMethod.POST },
       )
       .forRoutes('*');
   }

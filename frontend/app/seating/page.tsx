@@ -19,6 +19,8 @@ export default function SeatingPage() {
   const [seat, setSeat] = useState<any>(null);
   const [editing, setEditing] = useState(false);
   const [showAddZone, setShowAddZone] = useState(false);
+  const [addingSeatsToZone, setAddingSeatsToZone] = useState<string | null>(null);
+  const [addSeatsCount, setAddSeatsCount] = useState('5');
   const [assignMemberId, setAssignMemberId] = useState('');
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('UPI');
@@ -46,6 +48,14 @@ export default function SeatingPage() {
 
   const color = (s: string) =>
     s === 'FREE' ? 'bg-free' : s === 'EXPIRING_SOON' ? 'bg-expiring' : 'bg-occupied';
+
+  const allSeats = zones.flatMap((z: any) => z.seats ?? []);
+  const seatCounts = {
+    total: allSeats.length,
+    free: allSeats.filter((s: any) => s.status === 'FREE').length,
+    occupied: allSeats.filter((s: any) => s.status === 'OCCUPIED').length,
+    expiringSoon: allSeats.filter((s: any) => s.status === 'EXPIRING_SOON').length,
+  };
 
   const assign = async () => {
     if (!selectedSeatId || !assignMemberId) return;
@@ -90,6 +100,43 @@ export default function SeatingPage() {
     }
   };
 
+  const deleteSeat = async () => {
+    if (!selectedSeatId || !seat) return;
+    if (!window.confirm(`Delete seat #${seat.seatNumber}? This can't be undone.`)) return;
+    setError('');
+    setBusy(true);
+    try {
+      await api.deleteSeat(selectedSeatId);
+      setSelectedSeatId(null);
+      setSeat(null);
+      refetchZones();
+    } catch (err: any) {
+      setError(err.message || 'Could not delete seat');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const addSeats = async (zoneId: string) => {
+    const count = Number(addSeatsCount);
+    if (!count || count < 1) {
+      setError('Enter a valid number of seats to add');
+      return;
+    }
+    setError('');
+    setBusy(true);
+    try {
+      await api.addSeatsToZone(zoneId, count);
+      setAddingSeatsToZone(null);
+      setAddSeatsCount('5');
+      refetchZones();
+    } catch (err: any) {
+      setError(err.message || 'Could not add seats');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <div>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
@@ -110,19 +157,56 @@ export default function SeatingPage() {
         </div>
       </div>
 
-      <div className="flex gap-4 text-xs mb-4">
-        <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-free inline-block" /> Free</span>
-        <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-occupied inline-block" /> Occupied</span>
-        <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-expiring inline-block" /> Expiring Soon</span>
+      <div className="flex flex-wrap items-center gap-4 text-xs mb-4">
+        <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-free inline-block" /> Free ({seatCounts.free})</span>
+        <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-occupied inline-block" /> Occupied ({seatCounts.occupied})</span>
+        <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-expiring inline-block" /> Expiring Soon ({seatCounts.expiringSoon})</span>
+        <span className="text-gray-400">· {seatCounts.total} total seats</span>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
           {zones.map((zone: any) => (
             <div key={zone.id} className="bg-card rounded-xl p-5 border border-black/5">
-              <h2 className="text-xs tracking-wide text-gray-500 mb-3">
-                {zone.name?.toUpperCase()} (SEATS {zone.startSeat}-{zone.endSeat})
-              </h2>
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-xs tracking-wide text-gray-500">
+                  {zone.name?.toUpperCase()} · {zone.seats?.length ?? 0} SEATS
+                </h2>
+                {canAddZone && addingSeatsToZone !== zone.id && (
+                  <button
+                    onClick={() => setAddingSeatsToZone(zone.id)}
+                    className="text-[11px] text-accent font-medium shrink-0"
+                  >
+                    + Add Seats
+                  </button>
+                )}
+              </div>
+              {addingSeatsToZone === zone.id && (
+                <div className="flex items-center gap-2 mb-3 bg-accent/5 border border-accent/10 rounded-lg p-2">
+                  <span className="text-[11px] text-gray-500 shrink-0">Add</span>
+                  <input
+                    type="number"
+                    min="1"
+                    value={addSeatsCount}
+                    onChange={(e) => setAddSeatsCount(e.target.value)}
+                    className="w-16 border border-black/10 rounded-lg px-2 py-1 text-xs"
+                  />
+                  <span className="text-[11px] text-gray-500 shrink-0">more seats to this zone</span>
+                  <button
+                    onClick={() => addSeats(zone.id)}
+                    disabled={busy}
+                    className="ml-auto text-[11px] bg-sidebar text-white px-3 py-1 rounded-lg disabled:opacity-60 shrink-0"
+                  >
+                    {busy ? 'Adding…' : 'Add'}
+                  </button>
+                  <button
+                    onClick={() => setAddingSeatsToZone(null)}
+                    className="text-[11px] text-gray-400 shrink-0"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
               <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-12 gap-1.5">
                 {zone.seats?.map((s: any) => (
                   <button
@@ -285,6 +369,16 @@ export default function SeatingPage() {
                         ? 'Assign Seat & Record Payment'
                         : 'Assign Seat'}
                   </button>
+
+                  {canAddZone && (
+                    <button
+                      onClick={deleteSeat}
+                      disabled={busy}
+                      className="w-full border border-expiring/30 text-expiring text-sm py-2.5 rounded-lg disabled:opacity-60"
+                    >
+                      {busy ? 'Deleting…' : 'Delete Seat'}
+                    </button>
+                  )}
                 </div>
               )}
             </>

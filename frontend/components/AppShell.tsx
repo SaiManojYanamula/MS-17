@@ -45,7 +45,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   if (loading) return null;
 
-  if (!user) {
+  // Public routes (login, the QR-code apply form) must never show admin
+  // chrome — even if the visitor happens to still be logged in as staff in
+  // the same browser (e.g. testing their own QR code from the dashboard).
+  if (!user || isPublicRoute) {
     return <>{children}</>;
   }
 
