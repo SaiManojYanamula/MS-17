@@ -10,21 +10,16 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
+import { memoryStorage } from 'multer';
 import { extname } from 'path';
 import { PrismaService } from '../prisma.service';
 import { ApplicationsService } from '../applications/applications.service';
 import { MembersService } from '../members/members.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { R2Service } from '../common/storage/r2.service';
 
 const aadharUpload = FileInterceptor('aadharCard', {
-  storage: diskStorage({
-    destination: './uploads/aadhar',
-    filename: (_req, file, cb) => {
-      const unique = `${Date.now()}-${Math.round(Math.random() * 1e9)}${extname(file.originalname)}`;
-      cb(null, unique);
-    },
-  }),
+  storage: memoryStorage(),
   fileFilter: (_req, file, cb) => {
     cb(null, /^image\/(jpeg|jpg|png)$|^application\/pdf$/.test(file.mimetype));
   },
@@ -38,7 +33,14 @@ export class PublicController {
     private applicationsService: ApplicationsService,
     private membersService: MembersService,
     private notificationsService: NotificationsService,
+    private r2Service: R2Service,
   ) {}
+
+  private async uploadAadhar(file?: Express.Multer.File): Promise<string | undefined> {
+    if (!file) return undefined;
+    const unique = `${Date.now()}-${Math.round(Math.random() * 1e9)}${extname(file.originalname)}`;
+    return this.r2Service.upload(`aadhar/${unique}`, file.buffer, file.mimetype);
+  }
 
   // Welcome screen + branch picker for the QR-code self-booking flow.
   @Get('tenant/:slug')
@@ -110,7 +112,7 @@ export class PublicController {
     }
 
     try {
-      const aadharUrl = aadharCard ? `/api/uploads/aadhar/${aadharCard.filename}` : undefined;
+      const aadharUrl = await this.uploadAadhar(aadharCard);
 
       const member = await this.membersService.create(tenant.id, branch.id, {
         name: body.name,
@@ -169,7 +171,7 @@ export class PublicController {
     const branch = await this.prisma.branch.findFirst({ where: { tenantId: tenant.id } });
     if (!branch) throw new NotFoundException('No branch configured for this study hall');
 
-    const aadharUrl = aadharCard ? `/api/uploads/aadhar/${aadharCard.filename}` : undefined;
+    const aadharUrl = await this.uploadAadhar(aadharCard);
 
     return this.applicationsService.create(tenant.id, branch.id, { ...body, aadharUrl });
   }

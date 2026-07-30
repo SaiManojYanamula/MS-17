@@ -10,15 +10,19 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
+import { memoryStorage } from 'multer';
 import { extname } from 'path';
 import { TenantsService } from './tenants.service';
 import { Roles } from '../common/decorators/roles.decorator';
 import { TenantRequest } from '../common/middleware/tenant.middleware';
+import { R2Service } from '../common/storage/r2.service';
 
 @Controller('tenants')
 export class TenantsController {
-  constructor(private tenantsService: TenantsService) {}
+  constructor(
+    private tenantsService: TenantsService,
+    private r2Service: R2Service,
+  ) {}
 
   // Settings page profile card — the caller's own tenant/branch.
   @Get('me')
@@ -48,21 +52,19 @@ export class TenantsController {
   @Roles('TENANT_OWNER')
   @UseInterceptors(
     FileInterceptor('cover', {
-      storage: diskStorage({
-        destination: './uploads/covers',
-        filename: (_req, file, cb) => {
-          const unique = `${Date.now()}-${Math.round(Math.random() * 1e9)}${extname(file.originalname)}`;
-          cb(null, unique);
-        },
-      }),
+      storage: memoryStorage(),
       fileFilter: (_req, file, cb) => {
         cb(null, /^image\/(jpeg|jpg|png|webp)$/.test(file.mimetype));
       },
       limits: { fileSize: 5 * 1024 * 1024 },
     }),
   )
-  uploadCover(@Req() req: TenantRequest, @UploadedFile() cover?: Express.Multer.File) {
-    const coverImageUrl = cover ? `/api/uploads/covers/${cover.filename}` : undefined;
+  async uploadCover(@Req() req: TenantRequest, @UploadedFile() cover?: Express.Multer.File) {
+    let coverImageUrl: string | undefined;
+    if (cover) {
+      const unique = `${Date.now()}-${Math.round(Math.random() * 1e9)}${extname(cover.originalname)}`;
+      coverImageUrl = await this.r2Service.upload(`covers/${unique}`, cover.buffer, cover.mimetype);
+    }
     return this.tenantsService.updateTenant(req.tenantId!, { coverImageUrl });
   }
 

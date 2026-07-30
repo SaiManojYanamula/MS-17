@@ -15,9 +15,11 @@ import { RequestsModule } from './requests/requests.module';
 import { WebhooksModule } from './webhooks/webhooks.module';
 import { TenantMiddleware } from './common/middleware/tenant.middleware';
 import { PrismaService } from './prisma.service';
+import { StorageModule } from './common/storage/storage.module';
 
 @Module({
   imports: [
+    StorageModule,
     AuthModule,
     TenantsModule,
     MembersModule,
