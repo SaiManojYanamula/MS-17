@@ -6,7 +6,6 @@ import StatusPill from '@/components/StatusPill';
 import RecordPaymentModal from '@/components/RecordPaymentModal';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import { mockPaymentsSummary, mockTransactions } from '@/lib/mockData';
 import { formatDate, memberNameOf } from '@/lib/format';
 import { downloadCsv } from '@/lib/csv';
 
@@ -18,11 +17,13 @@ const statusMap: Record<string, string | undefined> = {
   Refunded: 'REFUNDED',
 };
 
+const EMPTY_SUMMARY = { collectedThisMonth: 0, pendingDues: 0, transactions: 0, avgTransaction: 0 };
+
 export default function PaymentsPage() {
   const { hasRole } = useAuth();
   const [tab, setTab] = useState('All Transactions');
-  const [summary, setSummary] = useState(mockPaymentsSummary);
-  const [transactions, setTransactions] = useState(mockTransactions);
+  const [summary, setSummary] = useState(EMPTY_SUMMARY);
+  const [transactions, setTransactions] = useState<any[]>([]);
   const [showRecord, setShowRecord] = useState(false);
   const [error, setError] = useState('');
   const [refundingId, setRefundingId] = useState<string | null>(null);

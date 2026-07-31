@@ -1,4 +1,5 @@
 import { MiddlewareConsumer, Module, NestModule, RequestMethod } from '@nestjs/common';
+import { ScheduleModule } from '@nestjs/schedule';
 import { AuthModule } from './auth/auth.module';
 import { TenantsModule } from './tenants/tenants.module';
 import { MembersModule } from './members/members.module';
@@ -13,6 +14,7 @@ import { AttendanceModule } from './attendance/attendance.module';
 import { NoticesModule } from './notices/notices.module';
 import { RequestsModule } from './requests/requests.module';
 import { WebhooksModule } from './webhooks/webhooks.module';
+import { BackupsModule } from './backups/backups.module';
 import { TenantMiddleware } from './common/middleware/tenant.middleware';
 import { PrismaService } from './prisma.service';
 import { StorageModule } from './common/storage/storage.module';
@@ -21,6 +23,7 @@ import { AppController } from './app.controller';
 @Module({
   controllers: [AppController],
   imports: [
+    ScheduleModule.forRoot(),
     StorageModule,
     AuthModule,
     TenantsModule,
@@ -36,6 +39,7 @@ import { AppController } from './app.controller';
     NoticesModule,
     RequestsModule,
     WebhooksModule,
+    BackupsModule,
   ],
   providers: [PrismaService],
 })

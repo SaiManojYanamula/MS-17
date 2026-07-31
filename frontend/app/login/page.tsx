@@ -42,7 +42,7 @@ export default function LoginPage() {
         <div className="relative z-10 flex flex-col justify-between p-12 text-white w-full">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-full bg-white/90" />
-            <span className="font-serif font-semibold text-lg">Akshara</span>
+            <span className="font-serif font-semibold text-lg">StudyHallPro</span>
           </div>
 
           <div>
@@ -78,7 +78,7 @@ export default function LoginPage() {
           <div className="flex items-center gap-2 mb-8 lg:hidden">
             <div className="w-8 h-8 rounded-full bg-accent" />
             <div>
-              <div className="font-serif font-semibold leading-tight">Akshara</div>
+              <div className="font-serif font-semibold leading-tight">StudyHallPro</div>
               <div className="text-[10px] text-gray-400 tracking-wide">ADMIN CONSOLE</div>
             </div>
           </div>

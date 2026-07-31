@@ -9,7 +9,6 @@ import EditMemberModal from '@/components/EditMemberModal';
 import ImportMembersModal from '@/components/ImportMembersModal';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import { mockMembers, mockMemberCounts } from '@/lib/mockData';
 import { formatDate, formatPlan, seatNumberOf } from '@/lib/format';
 import { downloadCsv } from '@/lib/csv';
 
@@ -20,14 +19,16 @@ const tabs = [
   { key: 'expired', label: 'Expired' },
 ];
 
+const EMPTY_COUNTS = { all: 0, active: 0, expiring: 0, expired: 0 };
+
 export default function MembersPage() {
   const { hasRole } = useAuth();
   const canDelete = hasRole('TENANT_OWNER', 'BRANCH_MANAGER');
   const canImport = hasRole('TENANT_OWNER', 'BRANCH_MANAGER');
   const [filter, setFilter] = useState<'all' | 'active' | 'expiring' | 'expired'>('all');
   const [search, setSearch] = useState('');
-  const [members, setMembers] = useState(mockMembers);
-  const [counts, setCounts] = useState(mockMemberCounts);
+  const [members, setMembers] = useState<any[]>([]);
+  const [counts, setCounts] = useState(EMPTY_COUNTS);
   const [showAdd, setShowAdd] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [editingMember, setEditingMember] = useState<any>(null);
@@ -38,8 +39,8 @@ export default function MembersPage() {
     api
       .members(filter === 'all' ? undefined : filter, search || undefined)
       .then((res) => {
-        setMembers(res.members ?? mockMembers);
-        setCounts(res.counts ?? mockMemberCounts);
+        setMembers(res.members ?? []);
+        setCounts(res.counts ?? EMPTY_COUNTS);
       })
       .catch(() => {});
   };

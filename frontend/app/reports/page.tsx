@@ -13,12 +13,14 @@ import {
 } from 'recharts';
 import TopBar from '@/components/TopBar';
 import { api } from '@/lib/api';
-import {
-  mockOccupancyTrend,
-  mockPlanDistribution,
-  mockRevenueTrend,
-  mockKeyNumbers,
-} from '@/lib/mockData';
+
+const EMPTY_KEY_NUMBERS = {
+  totalMembersAllTime: 0,
+  avgMembershipMonths: 0,
+  renewalRate: 0,
+  mostPopularBatch: '-',
+  mostCommonGoal: '-',
+};
 
 // Validated categorical palette (see dataviz skill) — fixed slot order, do not reorder or cycle.
 const planColors: Record<string, string> = {
@@ -57,10 +59,10 @@ function PieTooltip({ active, payload }: any) {
 }
 
 export default function ReportsPage() {
-  const [occupancy, setOccupancy] = useState(mockOccupancyTrend);
-  const [planDist, setPlanDist] = useState(mockPlanDistribution);
-  const [revenue, setRevenue] = useState(mockRevenueTrend);
-  const [keyNumbers, setKeyNumbers] = useState(mockKeyNumbers);
+  const [occupancy, setOccupancy] = useState<any[]>([]);
+  const [planDist, setPlanDist] = useState<any[]>([]);
+  const [revenue, setRevenue] = useState<any[]>([]);
+  const [keyNumbers, setKeyNumbers] = useState(EMPTY_KEY_NUMBERS);
 
   useEffect(() => {
     api.occupancyTrend(8).then(setOccupancy).catch(() => {});

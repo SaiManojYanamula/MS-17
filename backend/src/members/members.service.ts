@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import * as bcrypt from 'bcrypt';
 import * as XLSX from 'xlsx';
 import { PrismaService } from '../prisma.service';
+import { addMonthsClamped } from '../common/date-utils';
 
 const DEFAULT_STUDENT_PASSWORD = '1234';
 const SOON_WINDOW_MS = 7 * 24 * 60 * 60 * 1000; // 7-day "expiring soon" window
@@ -107,9 +108,9 @@ export class MembersService {
   // independently, so a member's expiry can't drift out of sync with when
   // they actually joined (matches ApplicationsService's approve() logic).
   private computeExpiry(plan: string, from: Date): Date {
+    if (plan === 'MONTHLY') return addMonthsClamped(from, 1);
+    if (plan === 'QUARTERLY') return addMonthsClamped(from, 3);
     const d = new Date(from);
-    if (plan === 'MONTHLY') return new Date(d.setMonth(d.getMonth() + 1));
-    if (plan === 'QUARTERLY') return new Date(d.setMonth(d.getMonth() + 3));
     return new Date(d.setDate(d.getDate() + 1)); // DAILY_PASS
   }
 

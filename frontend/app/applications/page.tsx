@@ -4,11 +4,10 @@ import { useEffect, useState } from 'react';
 import TopBar from '@/components/TopBar';
 import NewApplicationModal from '@/components/NewApplicationModal';
 import { api, API_ORIGIN } from '@/lib/api';
-import { mockPendingApplications } from '@/lib/mockData';
 import { formatDate, formatPlan } from '@/lib/format';
 
 export default function ApplicationsPage() {
-  const [applications, setApplications] = useState(mockPendingApplications);
+  const [applications, setApplications] = useState<any[]>([]);
   const [search, setSearch] = useState('');
   const [error, setError] = useState('');
   const [showNew, setShowNew] = useState(false);

@@ -9,12 +9,15 @@ import AddMemberModal from '@/components/AddMemberModal';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { formatDate, formatPlan } from '@/lib/format';
-import {
-  mockDashboard,
-  mockPendingApplications,
-  mockRecentActivity,
-  mockRevenueTrend,
-} from '@/lib/mockData';
+
+const EMPTY_STATS = {
+  activeMembers: 0,
+  seatsOccupied: 0,
+  seatsTotal: 0,
+  pendingApplications: 0,
+  revenueThisMonth: 0,
+  revenueChangePct: 0,
+};
 
 const CHART_ACCENT = '#0d9488';
 const CHART_HIGHLIGHT = '#0f172a';
@@ -32,10 +35,10 @@ function RevenueTooltip({ active, payload, label }: any) {
 
 export default function DashboardPage() {
   const { user } = useAuth();
-  const [stats, setStats] = useState(mockDashboard);
-  const [pending, setPending] = useState(mockPendingApplications);
-  const [activity, setActivity] = useState(mockRecentActivity);
-  const [revenue] = useState(mockRevenueTrend);
+  const [stats, setStats] = useState(EMPTY_STATS);
+  const [pending, setPending] = useState<any[]>([]);
+  const [activity, setActivity] = useState<any[]>([]);
+  const [revenue, setRevenue] = useState<{ month: string; total: number }[]>([]);
   const [newMembers, setNewMembers] = useState<{ count: number; members: any[] }>({
     count: 0,
     members: [],
@@ -44,11 +47,10 @@ export default function DashboardPage() {
   const [showAddMember, setShowAddMember] = useState(false);
 
   const refetch = () => {
-    // Falls back to bundled demo data if the backend isn't running yet —
-    // remove the catch fallback once the API is live.
     api.dashboardStats().then(setStats).catch(() => {});
     api.applications('PENDING').then(setPending).catch(() => {});
     api.recentActivity(5).then(setActivity).catch(() => {});
+    api.revenueTrend(6).then(setRevenue).catch(() => {});
     api.newMembersThisWeek(newMembersDays).then(setNewMembers).catch(() => {});
   };
 

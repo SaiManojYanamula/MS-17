@@ -26,7 +26,7 @@ const links = [
 
 export default function StudentSidebar({ open = false, onClose }: { open?: boolean; onClose?: () => void }) {
   const pathname = usePathname();
-  const { user, logout, enabledFeatures } = useAuth();
+  const { user, logout, enabledFeatures, tenantName } = useAuth();
   const [recentNoticeCount, setRecentNoticeCount] = useState(0);
 
   const visibleLinks = links.filter(
@@ -61,8 +61,10 @@ export default function StudentSidebar({ open = false, onClose }: { open?: boole
       >
       <div className="flex items-center gap-2 px-2 mb-8">
         <div className="w-8 h-8 rounded-full bg-accent" />
-        <div>
-          <div className="font-serif font-semibold leading-tight text-gray-900">Akshara</div>
+        <div className="min-w-0">
+          <div className="font-serif font-semibold leading-tight text-gray-900 truncate">
+            {tenantName ?? 'Loading…'}
+          </div>
           <div className="text-[10px] text-gray-400 tracking-wide">STUDENT PORTAL</div>
         </div>
       </div>
@@ -112,6 +114,7 @@ export default function StudentSidebar({ open = false, onClose }: { open?: boole
         >
           <LogoutIcon /> Log out
         </button>
+        <p className="text-center text-[10px] text-gray-300 mt-2">Powered by StudyHallPro</p>
       </div>
       </aside>
     </>

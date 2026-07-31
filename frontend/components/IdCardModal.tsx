@@ -1,8 +1,10 @@
 'use client';
 
 import { formatDate, formatPlan, seatNumberOf } from '@/lib/format';
+import { useAuth } from '@/lib/auth';
 
 export default function IdCardModal({ member, onClose }: { member: any; onClose: () => void }) {
+  const { tenantName } = useAuth();
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4 print:bg-white">
       <div className="bg-white rounded-xl p-6 w-full max-w-sm border border-black/5 print:border-0 print:shadow-none">
@@ -10,7 +12,7 @@ export default function IdCardModal({ member, onClose }: { member: any; onClose:
           <div className="flex items-center gap-2 mb-4">
             <div className="w-8 h-8 rounded-full bg-accent" />
             <div>
-              <div className="font-serif font-semibold leading-tight">Akshara</div>
+              <div className="font-serif font-semibold leading-tight">{tenantName ?? 'Study Hall'}</div>
               <div className="text-[10px] text-gray-400 tracking-wide">STUDENT ID CARD</div>
             </div>
           </div>
@@ -37,6 +39,7 @@ export default function IdCardModal({ member, onClose }: { member: any; onClose:
               <span className="font-medium">{formatDate(member.expiresAt)}</span>
             </div>
           </div>
+          <p className="text-center text-[9px] text-gray-300 mt-3">Powered by StudyHallPro</p>
         </div>
         <div className="flex gap-2 pt-4 print:hidden">
           <button onClick={onClose} className="flex-1 border border-black/10 text-sm py-2 rounded-lg">

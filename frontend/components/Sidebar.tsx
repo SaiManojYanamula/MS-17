@@ -35,7 +35,7 @@ const systemLinks = [{ href: '/settings', label: 'Settings', icon: SettingsIcon,
 
 export default function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: () => void }) {
   const pathname = usePathname();
-  const { user, logout, branches, activeBranchId, switchBranch, enabledFeatures } = useAuth();
+  const { user, logout, branches, activeBranchId, switchBranch, enabledFeatures, tenantName } = useAuth();
   const [pendingCount, setPendingCount] = useState(0);
   const [openRequestCount, setOpenRequestCount] = useState(0);
 
@@ -99,8 +99,10 @@ export default function Sidebar({ open = false, onClose }: { open?: boolean; onC
       >
       <div className="flex items-center gap-2 px-2 mb-8">
         <div className="w-8 h-8 rounded-full bg-accent" />
-        <div>
-          <div className="font-serif font-semibold leading-tight text-gray-900">Akshara</div>
+        <div className="min-w-0">
+          <div className="font-serif font-semibold leading-tight text-gray-900 truncate">
+            {tenantName ?? 'Loading…'}
+          </div>
           <div className="text-[10px] text-gray-400 tracking-wide">ADMIN CONSOLE</div>
         </div>
       </div>
@@ -147,6 +149,7 @@ export default function Sidebar({ open = false, onClose }: { open?: boolean; onC
         >
           <LogoutIcon /> Log out
         </button>
+        <p className="text-center text-[10px] text-gray-300 mt-2">Powered by StudyHallPro</p>
       </div>
       </aside>
     </>

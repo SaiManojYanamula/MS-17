@@ -16,7 +16,7 @@ const inter = Inter({
 });
 
 export const metadata = {
-  title: 'Akshara — Admin Console',
+  title: 'StudyHallPro — Admin Console',
   description: 'Study Hall Management SaaS',
 };
 

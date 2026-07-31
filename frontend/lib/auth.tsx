@@ -30,6 +30,10 @@ type AuthContextValue = {
   // Notices, Requests, Seating, Reports, Attendance) — null until loaded, in
   // which case UI should assume everything's on rather than flash-hide links.
   enabledFeatures: string[] | null;
+  // The tenant's own study-hall name — shown as the primary brand in
+  // tenant-facing chrome (owner/staff/student sidebars), since that's the
+  // identity those users actually care about, not the platform's name.
+  tenantName: string | null;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -42,6 +46,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [branches, setBranches] = useState<AuthBranch[]>([]);
   const [activeBranchId, setActiveBranchIdState] = useState<string | null>(null);
   const [enabledFeatures, setEnabledFeatures] = useState<string[] | null>(null);
+  const [tenantName, setTenantName] = useState<string | null>(null);
 
   const loadFeatures = useCallback(async (currentUser: AuthUser) => {
     if (!currentUser.tenantId) return; // SUPER_ADMIN isn't scoped to a tenant
@@ -49,6 +54,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const res = await api.myTenant();
       const raw = res.tenant?.enabledFeatures;
       setEnabledFeatures(typeof raw === 'string' ? raw.split(',') : null);
+      setTenantName(res.tenant?.name ?? null);
     } catch {
       // Non-fatal — links just won't be hidden if this fails.
     }
@@ -108,6 +114,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setBranches([]);
     setActiveBranchIdState(null);
     setEnabledFeatures(null);
+    setTenantName(null);
   }, []);
 
   const hasRole = useCallback((...roles: string[]) => !!user && roles.includes(user.role), [user]);
@@ -122,7 +129,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, loading, login, logout, hasRole, branches, activeBranchId, switchBranch, enabledFeatures }}
+      value={{ user, loading, login, logout, hasRole, branches, activeBranchId, switchBranch, enabledFeatures, tenantName }}
     >
       {children}
     </AuthContext.Provider>

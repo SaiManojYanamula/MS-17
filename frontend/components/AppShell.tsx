@@ -9,7 +9,7 @@ import { MenuIcon } from './icons';
 import { useAuth } from '@/lib/auth';
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
+  const { user, loading, tenantName } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -52,6 +52,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }
 
+  const brandName = isSuperAdmin ? 'StudyHallPro' : tenantName ?? 'Loading…';
+
   const MobileTopBar = (
     <div className="md:hidden sticky top-0 z-20 flex items-center gap-3 bg-white border-b border-black/5 px-4 py-3">
       <button
@@ -61,7 +63,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <MenuIcon />
       </button>
       <div className="w-6 h-6 rounded-full bg-accent shrink-0" />
-      <span className="font-serif font-semibold text-sm">Akshara</span>
+      <span className="font-serif font-semibold text-sm truncate">{brandName}</span>
     </div>
   );
 

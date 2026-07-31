@@ -85,8 +85,11 @@ export class ReportsService {
     const results: { month: string; total: number }[] = [];
     for (let i = months - 1; i >= 0; i--) {
       const total = await this.monthRevenue(tenantId, branchId, i);
-      const d = new Date();
-      d.setMonth(d.getMonth() - i);
+      const now = new Date();
+      // Pin to day 1 before subtracting months — otherwise on e.g. the 31st,
+      // subtracting into a shorter month (Feb/Apr/Jun) overflows into the
+      // month after instead, producing duplicate labels.
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       results.push({ month: d.toLocaleString('default', { month: 'short' }), total });
     }
     return results;

@@ -10,6 +10,7 @@ import {
   UsersIcon,
   ShieldIcon,
   PlansIcon,
+  BackupIcon,
   LogoutIcon,
 } from './icons';
 
@@ -20,6 +21,7 @@ const links = [
   { href: '/super-admin/users', label: 'Users', icon: UsersIcon },
   { href: '/super-admin/roles', label: 'Roles & Permissions', icon: ShieldIcon },
   { href: '/super-admin/subscriptions', label: 'Subscription & Plans', icon: PlansIcon },
+  { href: '/super-admin/backups', label: 'Backups', icon: BackupIcon },
 ];
 
 export default function SuperAdminSidebar({ open = false, onClose }: { open?: boolean; onClose?: () => void }) {
@@ -43,7 +45,7 @@ export default function SuperAdminSidebar({ open = false, onClose }: { open?: bo
       <div className="flex items-center gap-2 px-2 mb-8">
         <div className="w-8 h-8 rounded-full bg-accent" />
         <div>
-          <div className="font-serif font-semibold leading-tight text-gray-900">Akshara</div>
+          <div className="font-serif font-semibold leading-tight text-gray-900">StudyHallPro</div>
           <div className="text-[10px] text-gray-400 tracking-wide">SUPER ADMIN</div>
         </div>
       </div>

@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
+import { addMonthsClamped } from '../common/date-utils';
 
 @Injectable()
 export class ApplicationsService {
@@ -62,8 +63,8 @@ export class ApplicationsService {
 
   private computeExpiry(plan: string): Date {
     const now = new Date();
-    if (plan === 'MONTHLY') return new Date(now.setMonth(now.getMonth() + 1));
-    if (plan === 'QUARTERLY') return new Date(now.setMonth(now.getMonth() + 3));
+    if (plan === 'MONTHLY') return addMonthsClamped(now, 1);
+    if (plan === 'QUARTERLY') return addMonthsClamped(now, 3);
     return new Date(now.setDate(now.getDate() + 1)); // DAILY_PASS
   }
 }

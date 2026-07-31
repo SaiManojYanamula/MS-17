@@ -223,6 +223,10 @@ export const api = {
     request(`/super-admin/organizations/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
   whatsappUsage: () => request('/super-admin/whatsapp-usage'),
 
+  backups: () => request('/super-admin/backups'),
+  runBackup: () => request('/super-admin/backups/run', { method: 'POST' }),
+  backupDownloadUrl: (key: string) => request(`/super-admin/backups/download?key=${encodeURIComponent(key)}`),
+
   superAdminBranches: () => request('/super-admin/branches'),
   createSuperAdminBranch: (data: { tenantId: string; name: string; address?: string }) =>
     request('/super-admin/branches', { method: 'POST', body: JSON.stringify(data) }),
