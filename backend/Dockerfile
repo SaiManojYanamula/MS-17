@@ -12,4 +12,7 @@ RUN npx prisma generate
 RUN npm run build
 
 EXPOSE 4000
-CMD ["npm", "run", "start:prod"]
+# Apply pending migrations before every start — docker-compose's `command:`
+# override did this locally, but Railway (and anywhere else running this
+# Dockerfile directly, ignoring compose) needs it baked into the image itself.
+CMD ["sh", "-c", "npx prisma migrate deploy && npm run start:prod"]
