@@ -112,7 +112,12 @@ export default function LoginPage() {
               <input
                 type="text"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  // A pure-digit entry is a phone number attempt — cap it at
+                  // 10 digits. Anything else (an email) is left free-form.
+                  setEmail(/^\d*$/.test(v) ? v.slice(0, 10) : v.slice(0, 254));
+                }}
                 required
                 autoFocus
                 className="w-full border border-black/10 rounded-lg px-3.5 py-2.5 text-sm mb-4 transition-shadow focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent"
