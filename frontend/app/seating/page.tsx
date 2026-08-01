@@ -14,6 +14,7 @@ export default function SeatingPage() {
   const canAddZone = hasRole('TENANT_OWNER', 'BRANCH_MANAGER');
 
   const [zones, setZones] = useState<any[]>([]);
+  const [search, setSearch] = useState('');
   const [members, setMembers] = useState<any[]>([]);
   const [selectedSeatId, setSelectedSeatId] = useState<string | null>(null);
   const [seat, setSeat] = useState<any>(null);
@@ -48,6 +49,15 @@ export default function SeatingPage() {
 
   const color = (s: string) =>
     s === 'FREE' ? 'bg-free' : s === 'EXPIRING_SOON' ? 'bg-expiring' : 'bg-occupied';
+
+  const matchesSearch = (s: any) => {
+    if (!search.trim()) return true;
+    const q = search.trim().toLowerCase();
+    return String(s.seatNumber).includes(q) || (s.member?.name ?? '').toLowerCase().includes(q);
+  };
+  const visibleZones = zones
+    .map((z: any) => ({ ...z, seats: (z.seats ?? []).filter(matchesSearch) }))
+    .filter((z: any) => !search.trim() || z.seats.length > 0);
 
   const allSeats = zones.flatMap((z: any) => z.seats ?? []);
   const seatCounts = {
@@ -145,7 +155,7 @@ export default function SeatingPage() {
           <p className="text-sm text-gray-500">Click any seat for details</p>
         </div>
         <div className="flex items-center gap-3">
-          <TopBar />
+          <TopBar placeholder="Search by seat number or member..." value={search} onChange={setSearch} />
           {canAddZone && (
             <button
               onClick={() => setShowAddZone(true)}
@@ -166,7 +176,7 @@ export default function SeatingPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
-          {zones.map((zone: any) => (
+          {visibleZones.map((zone: any) => (
             <div key={zone.id} className="bg-card rounded-xl p-5 border border-black/5">
               <div className="flex items-center justify-between mb-3">
                 <h2 className="text-xs tracking-wide text-gray-500">
@@ -223,6 +233,9 @@ export default function SeatingPage() {
             </div>
           ))}
           {zones.length === 0 && <p className="text-sm text-gray-400">No seating data yet.</p>}
+          {zones.length > 0 && visibleZones.length === 0 && (
+            <p className="text-sm text-gray-400">No seats match "{search}".</p>
+          )}
         </div>
 
         <div className="bg-card rounded-xl p-5 border border-black/5 h-fit">

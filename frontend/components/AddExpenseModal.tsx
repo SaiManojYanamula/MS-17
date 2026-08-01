@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { api } from '@/lib/api';
 
-const categories = ['Rent', 'Electricity', 'Salaries', 'Maintenance', 'Supplies', 'Other'];
+const categories = ['Rent', 'Electricity', 'Water Bill', 'Salaries', 'Maintenance', 'Supplies', 'Other'];
 
 export default function AddExpenseModal({
   onClose,
@@ -13,6 +13,7 @@ export default function AddExpenseModal({
   onSuccess: () => void;
 }) {
   const [category, setCategory] = useState('Rent');
+  const [customCategory, setCustomCategory] = useState('');
   const [amount, setAmount] = useState('');
   const [note, setNote] = useState('');
   const [receipt, setReceipt] = useState<File | null>(null);
@@ -26,9 +27,14 @@ export default function AddExpenseModal({
       setError('Enter a valid amount');
       return;
     }
+    if (category === 'Other' && !customCategory.trim()) {
+      setError('Type a category name');
+      return;
+    }
     setSubmitting(true);
     try {
-      await api.createExpense({ category, amount: Number(amount), note: note || undefined, receipt });
+      const finalCategory = category === 'Other' ? customCategory.trim() : category;
+      await api.createExpense({ category: finalCategory, amount: Number(amount), note: note || undefined, receipt });
       onSuccess();
       onClose();
     } catch (err: any) {
@@ -57,6 +63,14 @@ export default function AddExpenseModal({
                   </option>
                 ))}
               </select>
+              {category === 'Other' && (
+                <input
+                  value={customCategory}
+                  onChange={(e) => setCustomCategory(e.target.value)}
+                  placeholder="Type category name"
+                  className="w-full border border-black/10 rounded-lg px-3 py-2 text-sm mt-2"
+                />
+              )}
             </div>
             <div>
               <label className="block text-xs text-gray-500 mb-1">Amount ₹</label>

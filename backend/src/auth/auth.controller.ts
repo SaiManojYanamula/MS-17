@@ -15,6 +15,12 @@ export class AuthController {
     return this.authService.login(body.email, body.password);
   }
 
+  // Public — a tenant owner locked out has nobody above them in-app to ask.
+  @Post('forgot-password')
+  forgotPassword(@Body('email') email: string) {
+    return this.authService.requestPasswordReset(email);
+  }
+
   // Two things can happen here, with different authorization:
   // - creating a STUDENT login (linked to a memberId) — allowed for anyone
   //   who can manage members (TENANT_OWNER/BRANCH_MANAGER/STAFF).

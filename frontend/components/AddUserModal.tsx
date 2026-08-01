@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { api } from '@/lib/api';
+import PasswordInput from '@/components/PasswordInput';
 
 export default function AddUserModal({
   organizations,
@@ -110,8 +111,7 @@ export default function AddUserModal({
           </div>
           <div>
             <label className="block text-xs text-gray-500 mb-1">Temporary Password (min 6 characters)</label>
-            <input
-              type="password"
+            <PasswordInput
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required

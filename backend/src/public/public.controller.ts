@@ -7,9 +7,10 @@ import {
   Param,
   Post,
   UploadedFile,
+  UploadedFiles,
   UseInterceptors,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FileFieldsInterceptor, FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { extname } from 'path';
 import { PrismaService } from '../prisma.service';
@@ -26,6 +27,26 @@ const aadharUpload = FileInterceptor('aadharCard', {
   limits: { fileSize: 5 * 1024 * 1024 },
 });
 
+// The instant-booking form: an Aadhar card (image/PDF) plus an optional
+// payment screenshot (image only — it's a screenshot, never a PDF).
+const bookUpload = FileFieldsInterceptor(
+  [
+    { name: 'aadharCard', maxCount: 1 },
+    { name: 'paymentScreenshot', maxCount: 1 },
+  ],
+  {
+    storage: memoryStorage(),
+    fileFilter: (_req, file, cb) => {
+      if (file.fieldname === 'paymentScreenshot') {
+        cb(null, /^image\/(jpeg|jpg|png)$/.test(file.mimetype));
+      } else {
+        cb(null, /^image\/(jpeg|jpg|png)$|^application\/pdf$/.test(file.mimetype));
+      }
+    },
+    limits: { fileSize: 5 * 1024 * 1024 },
+  },
+);
+
 @Controller('public')
 export class PublicController {
   constructor(
@@ -40,6 +61,12 @@ export class PublicController {
     if (!file) return undefined;
     const unique = `${Date.now()}-${Math.round(Math.random() * 1e9)}${extname(file.originalname)}`;
     return this.r2Service.upload(`aadhar/${unique}`, file.buffer, file.mimetype);
+  }
+
+  private async uploadPaymentScreenshot(file?: Express.Multer.File): Promise<string | undefined> {
+    if (!file) return undefined;
+    const unique = `${Date.now()}-${Math.round(Math.random() * 1e9)}${extname(file.originalname)}`;
+    return this.r2Service.upload(`payment-screenshots/${unique}`, file.buffer, file.mimetype);
   }
 
   // Welcome screen + branch picker for the QR-code self-booking flow.
@@ -80,7 +107,7 @@ export class PublicController {
   // claimed with a conditional update first so two students racing for the
   // same seat can't both win it.
   @Post('book')
-  @UseInterceptors(aadharUpload)
+  @UseInterceptors(bookUpload)
   async book(
     @Body()
     body: {
@@ -95,8 +122,11 @@ export class PublicController {
       amount?: string;
       method?: string;
     },
-    @UploadedFile() aadharCard?: Express.Multer.File,
+    @UploadedFiles()
+    files: { aadharCard?: Express.Multer.File[]; paymentScreenshot?: Express.Multer.File[] },
   ) {
+    const aadharCard = files?.aadharCard?.[0];
+    const paymentScreenshot = files?.paymentScreenshot?.[0];
     const tenant = await this.prisma.tenant.findUnique({ where: { slug: body.slug } });
     if (!tenant) throw new NotFoundException('Study hall not found');
 
@@ -127,6 +157,7 @@ export class PublicController {
 
       const amount = Number(body.amount);
       if (amount > 0) {
+        const screenshotUrl = await this.uploadPaymentScreenshot(paymentScreenshot);
         await this.prisma.payment.create({
           data: {
             tenantId: tenant.id,
@@ -136,6 +167,7 @@ export class PublicController {
             method: (body.method as any) || 'UPI',
             status: 'PAID',
             label: `${body.plan} - Initial Payment`,
+            screenshotUrl,
           },
         });
       }

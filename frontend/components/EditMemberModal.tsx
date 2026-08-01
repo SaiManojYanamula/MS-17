@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { api } from '@/lib/api';
+import { api, API_ORIGIN } from '@/lib/api';
+import PasswordInput from '@/components/PasswordInput';
 
 export default function EditMemberModal({
   member,
@@ -83,9 +84,9 @@ export default function EditMemberModal({
             <input
               type="tel"
               value={phone}
-              onChange={(e) => setPhone(e.target.value)}
+              onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
               placeholder="e.g. 9876543210"
-              pattern="(\+?91[-\s]?|0)?[6-9]\d{9}"
+              pattern="[6-9]\d{9}"
               title="Enter a valid 10-digit Indian phone number"
               className="w-full border border-black/10 rounded-lg px-3 py-2 text-sm"
             />
@@ -102,8 +103,7 @@ export default function EditMemberModal({
                 Reset Portal Password (forgot password)
               </label>
               <div className="flex gap-2">
-                <input
-                  type="password"
+                <PasswordInput
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   placeholder="New password (min 6 chars)"
@@ -122,6 +122,17 @@ export default function EditMemberModal({
               {resetPwMsg && <p className="text-[11px] text-free mt-1">{resetPwMsg}</p>}
               {resetPwError && <p className="text-[11px] text-expiring mt-1">{resetPwError}</p>}
             </div>
+          )}
+          {member.aadharUrl && (
+            <a
+              href={`${API_ORIGIN}${member.aadharUrl}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              download
+              className="block text-center text-xs text-accent font-medium border border-accent/20 bg-accent/5 rounded-lg py-2"
+            >
+              View / Download Aadhar Card
+            </a>
           )}
           <div>
             <label className="block text-xs text-gray-500 mb-1">Goal Tag</label>

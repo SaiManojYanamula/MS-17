@@ -92,4 +92,14 @@ export class SuperAdminController {
   resetUserPassword(@Param('id') id: string, @Body('password') password: string) {
     return this.superAdminService.resetUserPassword(id, password);
   }
+
+  @Get('password-reset-requests')
+  listPasswordResetRequests() {
+    return this.superAdminService.listPasswordResetRequests();
+  }
+
+  @Patch('password-reset-requests/:id/resolve')
+  resolvePasswordResetRequest(@Param('id') id: string) {
+    return this.superAdminService.resolvePasswordResetRequest(id);
+  }
 }

@@ -17,7 +17,10 @@ export class NoticesController {
 
   @Post()
   @Roles('TENANT_OWNER', 'BRANCH_MANAGER', 'STAFF')
-  create(@Req() req: TenantRequest, @Body() body: { title: string; body: string }) {
+  create(
+    @Req() req: TenantRequest,
+    @Body() body: { title: string; body: string; startDate?: string; endDate?: string },
+  ) {
     return this.noticesService.create(req.tenantId!, req.branchId!, body);
   }
 

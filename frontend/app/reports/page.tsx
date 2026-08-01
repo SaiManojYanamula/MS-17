@@ -13,6 +13,16 @@ import {
 } from 'recharts';
 import TopBar from '@/components/TopBar';
 import { api } from '@/lib/api';
+import { formatDate, formatPlan } from '@/lib/format';
+import { downloadCsv } from '@/lib/csv';
+
+function firstOfMonth(): string {
+  const d = new Date();
+  return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().slice(0, 10);
+}
+function today(): string {
+  return new Date().toISOString().slice(0, 10);
+}
 
 const EMPTY_KEY_NUMBERS = {
   totalMembersAllTime: 0,
@@ -64,12 +74,51 @@ export default function ReportsPage() {
   const [revenue, setRevenue] = useState<any[]>([]);
   const [keyNumbers, setKeyNumbers] = useState(EMPTY_KEY_NUMBERS);
 
+  const [fromDate, setFromDate] = useState(firstOfMonth());
+  const [toDate, setToDate] = useState(today());
+  const [joinedMembers, setJoinedMembers] = useState<any[]>([]);
+  const [joinedLoading, setJoinedLoading] = useState(false);
+  const [joinedError, setJoinedError] = useState('');
+
   useEffect(() => {
     api.occupancyTrend(8).then(setOccupancy).catch(() => {});
     api.planDistribution().then(setPlanDist).catch(() => {});
     api.revenueTrend(6).then(setRevenue).catch(() => {});
     api.keyNumbers().then(setKeyNumbers).catch(() => {});
   }, []);
+
+  const fetchJoined = () => {
+    if (!fromDate || !toDate) return;
+    setJoinedError('');
+    setJoinedLoading(true);
+    api
+      .membersJoinedInRange(fromDate, toDate)
+      .then((res) => setJoinedMembers(res.members ?? []))
+      .catch((err: any) => setJoinedError(err.message || 'Could not load'))
+      .finally(() => setJoinedLoading(false));
+  };
+
+  useEffect(() => {
+    fetchJoined();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const exportJoinedCsv = () => {
+    downloadCsv(
+      `students-joined-${fromDate}-to-${toDate}.csv`,
+      [
+        { header: 'Student ID', key: 'displayId' },
+        { header: 'Name', key: 'name' },
+        { header: 'Phone', key: 'phone' },
+        { header: 'Goal', key: 'goalTag' },
+        { header: 'Plan', key: 'plan' },
+        { header: 'Batch', key: 'batch' },
+        { header: 'Joined', key: 'joinedAt' },
+        { header: 'Expires', key: 'expiresAt' },
+      ],
+      joinedMembers,
+    );
+  };
 
   return (
     <div>
@@ -193,6 +242,89 @@ export default function ReportsPage() {
               <span className="font-medium">{keyNumbers.mostCommonGoal}</span>
             </div>
           </div>
+        </div>
+      </div>
+
+      <div className="bg-card rounded-xl p-5 border border-black/5 mt-4">
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-4">
+          <div>
+            <h2 className="font-serif font-semibold mb-3">Students Joined — Custom Range</h2>
+            <div className="flex flex-wrap items-end gap-3">
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">From</label>
+                <input
+                  type="date"
+                  value={fromDate}
+                  onChange={(e) => setFromDate(e.target.value)}
+                  className="border border-black/10 rounded-lg px-3 py-1.5 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">To</label>
+                <input
+                  type="date"
+                  value={toDate}
+                  onChange={(e) => setToDate(e.target.value)}
+                  className="border border-black/10 rounded-lg px-3 py-1.5 text-sm"
+                />
+              </div>
+              <button
+                onClick={fetchJoined}
+                disabled={joinedLoading}
+                className="bg-sidebar text-white text-sm px-4 py-2 rounded-lg disabled:opacity-60"
+              >
+                {joinedLoading ? 'Loading…' : 'Search'}
+              </button>
+            </div>
+          </div>
+          <button
+            onClick={exportJoinedCsv}
+            disabled={joinedMembers.length === 0}
+            className="border border-black/10 text-sm px-4 py-2 rounded-lg shrink-0 disabled:opacity-40"
+          >
+            Download CSV
+          </button>
+        </div>
+
+        {joinedError && <p className="text-xs text-expiring mb-3">{joinedError}</p>}
+        <p className="text-xs text-gray-500 mb-3">
+          {joinedMembers.length} student{joinedMembers.length === 1 ? '' : 's'} joined in this period
+        </p>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm min-w-[700px]">
+            <thead>
+              <tr className="text-left text-[10px] text-gray-400 tracking-wide border-b border-black/5">
+                <th className="pb-2 font-normal">STUDENT ID</th>
+                <th className="pb-2 font-normal">NAME</th>
+                <th className="pb-2 font-normal">PHONE</th>
+                <th className="pb-2 font-normal">PLAN</th>
+                <th className="pb-2 font-normal">BATCH</th>
+                <th className="pb-2 font-normal">JOINED</th>
+                <th className="pb-2 font-normal">EXPIRES</th>
+              </tr>
+            </thead>
+            <tbody>
+              {joinedMembers.map((m: any) => (
+                <tr key={m.id} className="border-t border-black/5">
+                  <td className="py-2.5 text-gray-500">{m.displayId || '—'}</td>
+                  <td className="font-medium">{m.name}</td>
+                  <td>{m.phone || '—'}</td>
+                  <td>{formatPlan(m.plan)}</td>
+                  <td>{m.batch}</td>
+                  <td>{formatDate(m.joinedAt)}</td>
+                  <td>{formatDate(m.expiresAt)}</td>
+                </tr>
+              ))}
+              {joinedMembers.length === 0 && !joinedLoading && (
+                <tr>
+                  <td colSpan={7} className="py-8 text-center text-gray-400">
+                    No students joined in this period.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>

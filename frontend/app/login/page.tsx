@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
+import { api } from '@/lib/api';
+import PasswordInput from '@/components/PasswordInput';
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -12,6 +14,21 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotSubmitting, setForgotSubmitting] = useState(false);
+  const [forgotSent, setForgotSent] = useState(false);
+
+  const submitForgot = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setForgotSubmitting(true);
+    try {
+      await api.forgotPassword(forgotEmail);
+      setForgotSent(true);
+    } finally {
+      setForgotSubmitting(false);
+    }
+  };
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -101,8 +118,7 @@ export default function LoginPage() {
                 className="w-full border border-black/10 rounded-lg px-3.5 py-2.5 text-sm mb-4 transition-shadow focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent"
               />
               <label className="block text-xs font-medium text-gray-500 mb-1.5">Password</label>
-              <input
-                type="password"
+              <PasswordInput
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -116,11 +132,36 @@ export default function LoginPage() {
                 Forgot password?
               </button>
               {showForgot && (
-                <p className="text-xs text-gray-500 bg-black/[0.03] rounded-lg px-3 py-2 mb-4">
-                  Students: ask your study hall's admin/staff to reset it from the Members page.
-                  Admin/staff: ask your study hall owner to reset it from Settings. Owners: contact
-                  the platform admin.
-                </p>
+                <div className="text-xs text-gray-500 bg-black/[0.03] rounded-lg px-3 py-3 mb-4 space-y-2">
+                  <p>
+                    Students: ask your study hall's admin/staff to reset it from the Members page.
+                    Admin/staff: ask your study hall owner to reset it from Settings.
+                  </p>
+                  <p className="font-medium text-gray-600">Study hall owner?</p>
+                  {forgotSent ? (
+                    <p className="text-free">
+                      Request sent — the platform admin will reset your password and contact you.
+                    </p>
+                  ) : (
+                    <form onSubmit={submitForgot} className="flex gap-2">
+                      <input
+                        type="email"
+                        value={forgotEmail}
+                        onChange={(e) => setForgotEmail(e.target.value)}
+                        placeholder="Your account email"
+                        required
+                        className="flex-1 border border-black/10 rounded-lg px-2.5 py-1.5 text-xs bg-white"
+                      />
+                      <button
+                        type="submit"
+                        disabled={forgotSubmitting}
+                        className="bg-sidebar text-white text-xs px-3 rounded-lg disabled:opacity-60 shrink-0"
+                      >
+                        {forgotSubmitting ? 'Sending…' : 'Request Reset'}
+                      </button>
+                    </form>
+                  )}
+                </div>
               )}
               {error && (
                 <p className="text-xs text-expiring bg-expiring/5 border border-expiring/20 rounded-lg px-3 py-2 mb-4">

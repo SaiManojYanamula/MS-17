@@ -86,7 +86,9 @@ export default function MembersPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <div>
           <h1 className="text-2xl font-serif font-semibold">Members</h1>
-          <p className="text-sm text-gray-500">{counts.all} active members across 3 batches</p>
+          <p className="text-sm text-gray-500">
+            {counts.all} active members across {new Set(members.map((m: any) => m.batch)).size || 0} batches
+          </p>
         </div>
         <div className="flex items-center gap-3">
           <TopBar value={search} onChange={setSearch} />

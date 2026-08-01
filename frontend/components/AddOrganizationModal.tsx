@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { api } from '@/lib/api';
+import PasswordInput from '@/components/PasswordInput';
 
 export default function AddOrganizationModal({
   onClose,
@@ -84,8 +85,7 @@ export default function AddOrganizationModal({
               className="w-full border border-black/10 rounded-lg px-3 py-2 text-sm mb-3"
             />
             <label className="block text-xs text-gray-500 mb-1">Temporary Password (min 6 characters)</label>
-            <input
-              type="password"
+            <PasswordInput
               value={ownerPassword}
               onChange={(e) => setOwnerPassword(e.target.value)}
               required

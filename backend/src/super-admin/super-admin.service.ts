@@ -161,4 +161,18 @@ export class SuperAdminService {
   async resetUserPassword(id: string, password: string) {
     return this.authService.resetPassword(id, password);
   }
+
+  // Owner-submitted "forgot password" requests (see auth.service.ts's
+  // requestPasswordReset) — the super-admin looks up the matching account
+  // in Users and resets it directly, then marks the request resolved.
+  async listPasswordResetRequests() {
+    return this.prisma.passwordResetRequest.findMany({
+      where: { status: 'OPEN' },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async resolvePasswordResetRequest(id: string) {
+    return this.prisma.passwordResetRequest.update({ where: { id }, data: { status: 'RESOLVED' } });
+  }
 }

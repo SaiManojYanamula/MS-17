@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 
 function computeExpiry(plan: string, from: string): string {
@@ -25,15 +25,25 @@ export default function AddMemberModal({
   const [plan, setPlan] = useState('MONTHLY');
   const [batch, setBatch] = useState('Morning');
   const [joinedAt, setJoinedAt] = useState(() => new Date().toISOString().slice(0, 10));
+  const [zones, setZones] = useState<any[]>([]);
+  const [seatId, setSeatId] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    api.seatMap().then(setZones).catch(() => {});
+  }, []);
+
+  const freeSeatsByZone = zones
+    .map((z: any) => ({ name: z.name, seats: (z.seats ?? []).filter((s: any) => s.status === 'FREE') }))
+    .filter((z) => z.seats.length > 0);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setSubmitting(true);
     try {
-      await api.createMember({
+      const member = await api.createMember({
         name,
         phone,
         goalTag: goalTag || undefined,
@@ -41,6 +51,9 @@ export default function AddMemberModal({
         batch,
         joinedAt: new Date(joinedAt).toISOString(),
       });
+      if (seatId) {
+        await api.assignSeat(seatId, member.id);
+      }
       onSuccess();
       onClose();
     } catch (err: any) {
@@ -69,9 +82,9 @@ export default function AddMemberModal({
             <input
               type="tel"
               value={phone}
-              onChange={(e) => setPhone(e.target.value)}
+              onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
               placeholder="e.g. 9876543210"
-              pattern="(\+?91[-\s]?|0)?[6-9]\d{9}"
+              pattern="[6-9]\d{9}"
               title="Enter a valid 10-digit Indian phone number"
               required
               className="w-full border border-black/10 rounded-lg px-3 py-2 text-sm"
@@ -114,6 +127,25 @@ export default function AddMemberModal({
                 <option value="Evening">Evening</option>
               </select>
             </div>
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Seat</label>
+            <select
+              value={seatId}
+              onChange={(e) => setSeatId(e.target.value)}
+              className="w-full border border-black/10 rounded-lg px-3 py-2 text-sm"
+            >
+              <option value="">No seat yet — assign later from Seating</option>
+              {freeSeatsByZone.map((z) => (
+                <optgroup key={z.name} label={z.name}>
+                  {z.seats.map((s: any) => (
+                    <option key={s.id} value={s.id}>
+                      Seat {s.seatNumber}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
           </div>
           <div>
             <label className="block text-xs text-gray-500 mb-1">Joining Date</label>

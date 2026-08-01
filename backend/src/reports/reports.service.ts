@@ -95,6 +95,29 @@ export class ReportsService {
     return results;
   }
 
+  // Reports page — explicit from/to date range (unlike newMembersThisWeek's
+  // rolling N-day window), with full member detail for the table + CSV export.
+  async membersJoinedInRange(tenantId: string, branchId: string, from: Date, to: Date) {
+    // Inclusive of the whole `to` day.
+    const toEnd = new Date(to.getFullYear(), to.getMonth(), to.getDate(), 23, 59, 59, 999);
+    const members = await this.prisma.member.findMany({
+      where: { tenantId, branchId, joinedAt: { gte: from, lte: toEnd } },
+      select: {
+        id: true,
+        displayId: true,
+        name: true,
+        phone: true,
+        goalTag: true,
+        plan: true,
+        batch: true,
+        joinedAt: true,
+        expiresAt: true,
+      },
+      orderBy: { joinedAt: 'desc' },
+    });
+    return { count: members.length, members };
+  }
+
   // Occupancy trend — last N weeks, matches "Occupancy Trend - Last 8 Weeks"
   async occupancyTrend(tenantId: string, branchId: string, weeks = 8) {
     const totalSeats = await this.prisma.seat.count({ where: { tenantId, branchId } });

@@ -50,4 +50,15 @@ export class ReportsController {
   keyNumbers(@Req() req: TenantRequest) {
     return this.reportsService.keyNumbers(req.tenantId!, req.branchId!);
   }
+
+  @Get('members-joined')
+  @RequireFeature('REPORTS')
+  membersJoinedInRange(@Req() req: TenantRequest, @Query('from') from: string, @Query('to') to: string) {
+    return this.reportsService.membersJoinedInRange(
+      req.tenantId!,
+      req.branchId!,
+      new Date(from),
+      new Date(to),
+    );
+  }
 }

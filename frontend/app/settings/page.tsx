@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
 import TopBar from '@/components/TopBar';
+import PasswordInput from '@/components/PasswordInput';
 import { api, API_ORIGIN } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 
@@ -346,8 +347,7 @@ export default function SettingsPage() {
                 </div>
                 {resettingUserId === s.id && (
                   <form onSubmit={submitResetPassword} className="flex gap-2 mt-2">
-                    <input
-                      type="password"
+                    <PasswordInput
                       placeholder="New password (min 6 chars)"
                       value={resetPasswordValue}
                       onChange={(e) => setResetPasswordValue(e.target.value)}
@@ -388,9 +388,8 @@ export default function SettingsPage() {
                 required
                 className="w-full border border-black/10 rounded-lg px-3 py-2 text-sm"
               />
-              <input
+              <PasswordInput
                 placeholder="Temporary password (min 6 characters)"
-                type="password"
                 value={invitePassword}
                 onChange={(e) => setInvitePassword(e.target.value)}
                 required

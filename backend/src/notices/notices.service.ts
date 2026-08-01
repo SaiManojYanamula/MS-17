@@ -12,8 +12,21 @@ export class NoticesService {
     });
   }
 
-  async create(tenantId: string, branchId: string, data: { title: string; body: string }) {
-    return this.prisma.notice.create({ data: { ...data, tenantId, branchId } });
+  async create(
+    tenantId: string,
+    branchId: string,
+    data: { title: string; body: string; startDate?: string; endDate?: string },
+  ) {
+    return this.prisma.notice.create({
+      data: {
+        title: data.title,
+        body: data.body,
+        startDate: data.startDate ? new Date(data.startDate) : undefined,
+        endDate: data.endDate ? new Date(data.endDate) : undefined,
+        tenantId,
+        branchId,
+      },
+    });
   }
 
   async remove(tenantId: string, id: string) {

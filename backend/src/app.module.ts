@@ -53,6 +53,7 @@ export class AppModule implements NestModule {
       .exclude(
         { path: 'health', method: RequestMethod.GET },
         { path: 'auth/login', method: RequestMethod.POST },
+        { path: 'auth/forgot-password', method: RequestMethod.POST },
         { path: 'public/apply/:slug', method: RequestMethod.POST },
         { path: 'public/tenant/:slug', method: RequestMethod.GET },
         { path: 'public/seats/:slug/:branchId', method: RequestMethod.GET },

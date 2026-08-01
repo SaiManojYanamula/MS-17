@@ -130,4 +130,16 @@ export class AuthService {
     await this.prisma.user.update({ where: { id: userId }, data: { password: hashed } });
     return { success: true };
   }
+
+  // Tenant owners have nobody above them in-app to reset their password —
+  // this logs a request for the Super Admin to action manually (there's no
+  // live email delivery to send a reset link through). Always returns the
+  // same generic message regardless of whether the email exists, so this
+  // can't be used to probe which emails are registered.
+  async requestPasswordReset(email: string) {
+    if (email) {
+      await this.prisma.passwordResetRequest.create({ data: { email } });
+    }
+    return { success: true };
+  }
 }

@@ -266,6 +266,7 @@ model Payment {
   method    PaymentMethod
   status    PaymentStatus @default(PENDING)
   label     String // e.g. "Monthly Renewal", "Quarterly Plan", "Daily Pass"
+  screenshotUrl String? // proof-of-payment screenshot from the public self-booking flow
   createdAt DateTime      @default(now())
 
   branch Branch @relation(fields: [branchId], references: [id])
@@ -314,6 +315,10 @@ model Notice {
   branchId  String
   title     String
   body      String
+  // Optional holiday/closure date range shown alongside the notice — most
+  // notices are plain announcements and leave these unset.
+  startDate DateTime?
+  endDate   DateTime?
   createdAt DateTime @default(now())
 
   branch Branch @relation(fields: [branchId], references: [id])
@@ -337,4 +342,16 @@ model Request {
 
   @@index([tenantId])
   @@index([branchId])
+}
+
+// A tenant owner has nobody above them in-app to reset their password (unlike
+// staff/students, whose owner/admin can do it directly) — this is their
+// "forgot password" path: an unauthenticated request the Super Admin actions.
+model PasswordResetRequest {
+  id        String   @id @default(uuid())
+  email     String
+  status    String   @default("OPEN") // OPEN / RESOLVED
+  createdAt DateTime @default(now())
+
+  @@index([status])
 }

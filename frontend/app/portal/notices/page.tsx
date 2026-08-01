@@ -12,6 +12,8 @@ export default function NoticesPage() {
   const [showAdd, setShowAdd] = useState(false);
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -28,9 +30,16 @@ export default function NoticesPage() {
     setError('');
     setSubmitting(true);
     try {
-      await api.postNotice({ title, body });
+      await api.postNotice({
+        title,
+        body,
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
+      });
       setTitle('');
       setBody('');
+      setStartDate('');
+      setEndDate('');
       setShowAdd(false);
       refetch();
     } catch (err: any) {
@@ -90,6 +99,28 @@ export default function NoticesPage() {
               className="w-full border border-black/10 rounded-lg px-3 py-2 text-sm resize-none"
             />
           </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">
+              Holiday/closure dates (optional — e.g. for a holiday notice)
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                placeholder="From"
+                className="w-full border border-black/10 rounded-lg px-3 py-2 text-sm"
+              />
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                placeholder="To"
+                min={startDate || undefined}
+                className="w-full border border-black/10 rounded-lg px-3 py-2 text-sm"
+              />
+            </div>
+          </div>
           <button
             type="submit"
             disabled={submitting}
@@ -107,6 +138,12 @@ export default function NoticesPage() {
               <div>
                 <div className="font-medium text-sm">{n.title}</div>
                 <p className="text-sm text-gray-600 mt-1">{n.body}</p>
+                {n.startDate && (
+                  <p className="text-xs text-accent font-medium mt-2">
+                    📅 {formatDate(n.startDate)}
+                    {n.endDate && n.endDate !== n.startDate ? ` – ${formatDate(n.endDate)}` : ''}
+                  </p>
+                )}
                 <p className="text-xs text-gray-400 mt-2">{formatDate(n.createdAt)}</p>
               </div>
               {canManage && (

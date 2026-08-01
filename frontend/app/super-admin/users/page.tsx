@@ -1,25 +1,41 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import TopBar from '@/components/TopBar';
 import AddUserModal from '@/components/AddUserModal';
+import PasswordInput from '@/components/PasswordInput';
 import { api } from '@/lib/api';
 
 export default function PlatformUsersPage() {
   const [users, setUsers] = useState<any[]>([]);
   const [orgs, setOrgs] = useState<any[]>([]);
+  const [resetRequests, setResetRequests] = useState<any[]>([]);
   const [search, setSearch] = useState('');
   const [showAdd, setShowAdd] = useState(false);
   const [error, setError] = useState('');
+  const [resettingId, setResettingId] = useState<string | null>(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [resetMsg, setResetMsg] = useState('');
+  const [resetting, setResetting] = useState(false);
 
   const refetch = () => {
     api.platformUsers().then(setUsers).catch(() => setError('Could not load users'));
     api.organizations().then(setOrgs).catch(() => {});
+    api.passwordResetRequests().then(setResetRequests).catch(() => {});
   };
 
   useEffect(() => {
     refetch();
   }, []);
+
+  const resolveRequest = async (id: string) => {
+    try {
+      await api.resolvePasswordResetRequest(id);
+      setResetRequests((prev) => prev.filter((r) => r.id !== id));
+    } catch (err: any) {
+      setError(err.message || 'Could not resolve request');
+    }
+  };
 
   const visible = users.filter(
     (u) => u.name.toLowerCase().includes(search.toLowerCase()) || u.email.toLowerCase().includes(search.toLowerCase()),
@@ -32,6 +48,21 @@ export default function PlatformUsersPage() {
       refetch();
     } catch (err: any) {
       setError(err.message || "Couldn't update user");
+    }
+  };
+
+  const submitReset = async (e: React.FormEvent, userId: string) => {
+    e.preventDefault();
+    setResetMsg('');
+    setResetting(true);
+    try {
+      await api.resetPlatformUserPassword(userId, newPassword);
+      setResetMsg('Password reset — share it with them directly.');
+      setNewPassword('');
+    } catch (err: any) {
+      setError(err.message || 'Could not reset password');
+    } finally {
+      setResetting(false);
     }
   };
 
@@ -55,6 +86,35 @@ export default function PlatformUsersPage() {
 
       {error && <p className="text-xs text-expiring mb-3">{error}</p>}
 
+      {resetRequests.length > 0 && (
+        <div className="bg-expiring/5 border border-expiring/20 rounded-xl p-4 mb-6">
+          <h2 className="text-sm font-semibold mb-2">
+            Password Reset Requests ({resetRequests.length})
+          </h2>
+          <p className="text-xs text-gray-500 mb-3">
+            Find the matching account below, reset their password, and share it with them — then mark resolved.
+          </p>
+          <div className="space-y-2">
+            {resetRequests.map((r) => (
+              <div key={r.id} className="flex items-center justify-between bg-white rounded-lg px-3 py-2 text-sm">
+                <div>
+                  <span className="font-medium">{r.email}</span>
+                  <span className="text-xs text-gray-400 ml-2">
+                    {new Date(r.createdAt).toLocaleString('en-IN')}
+                  </span>
+                </div>
+                <button
+                  onClick={() => resolveRequest(r.id)}
+                  className="text-xs text-accent font-medium shrink-0"
+                >
+                  Mark Resolved
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="bg-card rounded-xl border border-black/5 overflow-x-auto">
         <table className="w-full text-sm min-w-[700px]">
           <thead>
@@ -69,28 +129,64 @@ export default function PlatformUsersPage() {
           </thead>
           <tbody>
             {visible.map((u) => (
-              <tr key={u.id} className="border-b border-black/5 last:border-0">
-                <td className="p-4 font-medium">{u.name}</td>
-                <td className="text-gray-500">{u.email}</td>
-                <td>{u.tenant?.name ?? '—'}</td>
-                <td>{u.role.replace('_', ' ')}</td>
-                <td>
-                  <span
-                    className={`text-[10px] rounded-full px-2 py-0.5 ${
-                      u.isActive ? 'bg-free/20 text-free' : 'bg-expiring/20 text-expiring'
-                    }`}
-                  >
-                    {u.isActive ? 'ACTIVE' : 'SUSPENDED'}
-                  </span>
-                </td>
-                <td className="p-4">
-                  {u.role !== 'SUPER_ADMIN' && (
-                    <button onClick={() => toggleActive(u)} className="text-xs text-accent font-medium">
-                      {u.isActive ? 'Suspend' : 'Reactivate'}
+              <Fragment key={u.id}>
+                <tr className="border-b border-black/5 last:border-0">
+                  <td className="p-4 font-medium">{u.name}</td>
+                  <td className="text-gray-500">{u.email}</td>
+                  <td>{u.tenant?.name ?? '—'}</td>
+                  <td>{u.role.replace('_', ' ')}</td>
+                  <td>
+                    <span
+                      className={`text-[10px] rounded-full px-2 py-0.5 ${
+                        u.isActive ? 'bg-free/20 text-free' : 'bg-expiring/20 text-expiring'
+                      }`}
+                    >
+                      {u.isActive ? 'ACTIVE' : 'SUSPENDED'}
+                    </span>
+                  </td>
+                  <td className="p-4 space-x-3">
+                    {u.role !== 'SUPER_ADMIN' && (
+                      <button onClick={() => toggleActive(u)} className="text-xs text-accent font-medium">
+                        {u.isActive ? 'Suspend' : 'Reactivate'}
+                      </button>
+                    )}
+                    <button
+                      onClick={() => {
+                        setResettingId(resettingId === u.id ? null : u.id);
+                        setResetMsg('');
+                        setNewPassword('');
+                      }}
+                      className="text-xs text-accent font-medium"
+                    >
+                      Reset Password
                     </button>
-                  )}
-                </td>
-              </tr>
+                  </td>
+                </tr>
+                {resettingId === u.id && (
+                  <tr className="border-b border-black/5 last:border-0">
+                    <td colSpan={6} className="p-4 bg-black/[0.02]">
+                      <form onSubmit={(e) => submitReset(e, u.id)} className="flex items-center gap-2 max-w-sm">
+                        <PasswordInput
+                          value={newPassword}
+                          onChange={(e) => setNewPassword(e.target.value)}
+                          placeholder="New password (min 6 chars)"
+                          minLength={6}
+                          required
+                          className="flex-1 border border-black/10 rounded-lg px-3 py-1.5 text-xs"
+                        />
+                        <button
+                          type="submit"
+                          disabled={resetting}
+                          className="bg-sidebar text-white text-xs px-3 py-1.5 rounded-lg disabled:opacity-60 shrink-0"
+                        >
+                          {resetting ? 'Saving…' : 'Save'}
+                        </button>
+                      </form>
+                      {resetMsg && <p className="text-xs text-free mt-1">{resetMsg}</p>}
+                    </td>
+                  </tr>
+                )}
+              </Fragment>
             ))}
             {visible.length === 0 && (
               <tr>

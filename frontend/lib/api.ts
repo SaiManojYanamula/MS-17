@@ -45,6 +45,8 @@ async function request(path: string, options: RequestInit = {}) {
 export const api = {
   login: (email: string, password: string) =>
     request('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
+  forgotPassword: (email: string) =>
+    request('/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email }) }),
 
   dashboardStats: () => request('/reports/dashboard'),
   recentActivity: (limit = 5) => request(`/reports/recent-activity?limit=${limit}`),
@@ -53,6 +55,7 @@ export const api = {
   planDistribution: () => request('/reports/plan-distribution'),
   keyNumbers: () => request('/reports/key-numbers'),
   newMembersThisWeek: (days = 7) => request(`/reports/new-members?days=${days}`),
+  membersJoinedInRange: (from: string, to: string) => request(`/reports/members-joined?from=${from}&to=${to}`),
 
   applications: (status?: string) =>
     request(`/applications${status ? `?status=${status}` : ''}`),
@@ -88,6 +91,7 @@ export const api = {
     amount?: number;
     method?: string;
     aadharCard: File;
+    paymentScreenshot?: File;
   }) => {
     const formData = new FormData();
     formData.append('slug', data.slug);
@@ -101,6 +105,7 @@ export const api = {
     if (data.amount) formData.append('amount', String(data.amount));
     if (data.method) formData.append('method', data.method);
     formData.append('aadharCard', data.aadharCard);
+    if (data.paymentScreenshot) formData.append('paymentScreenshot', data.paymentScreenshot);
     return request('/public/book', { method: 'POST', body: formData });
   },
 
@@ -246,6 +251,9 @@ export const api = {
     request(`/super-admin/users/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
   resetPlatformUserPassword: (id: string, password: string) =>
     request(`/super-admin/users/${id}/reset-password`, { method: 'PATCH', body: JSON.stringify({ password }) }),
+  passwordResetRequests: () => request('/super-admin/password-reset-requests'),
+  resolvePasswordResetRequest: (id: string) =>
+    request(`/super-admin/password-reset-requests/${id}/resolve`, { method: 'PATCH' }),
 
   // Attendance
   myAttendance: () => request('/attendance/me'),
@@ -255,7 +263,7 @@ export const api = {
 
   // Notices
   notices: () => request('/notices'),
-  postNotice: (data: { title: string; body: string }) =>
+  postNotice: (data: { title: string; body: string; startDate?: string; endDate?: string }) =>
     request('/notices', { method: 'POST', body: JSON.stringify(data) }),
   deleteNotice: (id: string) => request(`/notices/${id}`, { method: 'DELETE' }),
 

@@ -10,6 +10,7 @@ import { downloadCsv } from '@/lib/csv';
 const categoryColors: Record<string, string> = {
   Rent: '#2a78d6',
   Electricity: '#d97706',
+  'Water Bill': '#0369a1',
   Salaries: '#7c2d43',
   Maintenance: '#15803d',
   Supplies: '#0d9488',
@@ -21,6 +22,8 @@ export default function ExpensesPage() {
   const [summary, setSummary] = useState({ thisMonth: 0, allTime: 0, count: 0 });
   const [showAdd, setShowAdd] = useState(false);
   const [error, setError] = useState('');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
 
   const refetch = () => {
     api.expenses().then(setExpenses).catch(() => setError('Could not load expenses'));
@@ -31,6 +34,16 @@ export default function ExpensesPage() {
     refetch();
   }, []);
 
+  // From/To are inclusive on both ends — toDate's end-of-day so that day's own expenses count.
+  const filteredExpenses = expenses.filter((e: any) => {
+    const at = new Date(e.createdAt).getTime();
+    if (fromDate && at < new Date(fromDate).getTime()) return false;
+    if (toDate && at > new Date(toDate).getTime() + 24 * 60 * 60 * 1000 - 1) return false;
+    return true;
+  });
+  const periodTotal = filteredExpenses.reduce((sum: number, e: any) => sum + e.amount, 0);
+  const hasDateFilter = !!(fromDate || toDate);
+
   const exportCsv = () => {
     downloadCsv(
       `expenses-${new Date().toISOString().slice(0, 10)}.csv`,
@@ -40,7 +53,7 @@ export default function ExpensesPage() {
         { header: 'Note', key: 'note' },
         { header: 'Date', key: 'createdAt' },
       ],
-      expenses,
+      filteredExpenses,
     );
   };
 
@@ -83,6 +96,46 @@ export default function ExpensesPage() {
         </div>
       </div>
 
+      <div className="bg-card rounded-xl p-4 border border-black/5 mb-6 flex flex-wrap items-end gap-3">
+        <div>
+          <label className="block text-xs text-gray-500 mb-1">From</label>
+          <input
+            type="date"
+            value={fromDate}
+            onChange={(e) => setFromDate(e.target.value)}
+            className="border border-black/10 rounded-lg px-3 py-1.5 text-sm"
+          />
+        </div>
+        <div>
+          <label className="block text-xs text-gray-500 mb-1">To</label>
+          <input
+            type="date"
+            value={toDate}
+            onChange={(e) => setToDate(e.target.value)}
+            className="border border-black/10 rounded-lg px-3 py-1.5 text-sm"
+          />
+        </div>
+        {hasDateFilter && (
+          <button
+            onClick={() => {
+              setFromDate('');
+              setToDate('');
+            }}
+            className="text-xs text-gray-400 underline"
+          >
+            Clear
+          </button>
+        )}
+        {hasDateFilter && (
+          <div className="ml-auto text-right">
+            <div className="text-xl font-serif font-semibold">₹{periodTotal.toLocaleString('en-IN')}</div>
+            <div className="text-xs text-gray-500">
+              {filteredExpenses.length} expense{filteredExpenses.length === 1 ? '' : 's'} in this period
+            </div>
+          </div>
+        )}
+      </div>
+
       {error && <p className="text-xs text-expiring mb-3">{error}</p>}
 
       <div className="bg-card rounded-xl border border-black/5 overflow-x-auto">
@@ -97,7 +150,7 @@ export default function ExpensesPage() {
             </tr>
           </thead>
           <tbody>
-            {expenses.map((e: any) => (
+            {filteredExpenses.map((e: any) => (
               <tr key={e.id} className="border-b border-black/5 last:border-0">
                 <td className="p-4">
                   <span
@@ -129,10 +182,10 @@ export default function ExpensesPage() {
                 </td>
               </tr>
             ))}
-            {expenses.length === 0 && (
+            {filteredExpenses.length === 0 && (
               <tr>
                 <td colSpan={5} className="p-8 text-center text-gray-400">
-                  No expenses recorded yet.
+                  {hasDateFilter ? 'No expenses in this date range.' : 'No expenses recorded yet.'}
                 </td>
               </tr>
             )}

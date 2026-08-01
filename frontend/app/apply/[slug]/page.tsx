@@ -71,6 +71,7 @@ export default function ApplyPage({ params }: { params: { slug: string } }) {
   const [amount, setAmount] = useState('');
   const [method, setMethod] = useState('UPI');
   const [qrDataUrl, setQrDataUrl] = useState('');
+  const [paymentScreenshot, setPaymentScreenshot] = useState<File | null>(null);
 
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -122,8 +123,14 @@ export default function ApplyPage({ params }: { params: { slug: string } }) {
     setStep('payment');
   };
 
+  const requiresScreenshot = method === 'UPI' && Number(amount) > 0 && !!tenant?.upiId;
+
   const confirmAndBook = async () => {
     if (!aadharCard) return;
+    if (requiresScreenshot && !paymentScreenshot) {
+      setError('Please upload a screenshot of your payment');
+      return;
+    }
     setError('');
     setSubmitting(true);
     try {
@@ -139,6 +146,7 @@ export default function ApplyPage({ params }: { params: { slug: string } }) {
         amount: amount ? Number(amount) : undefined,
         method,
         aadharCard,
+        paymentScreenshot: paymentScreenshot || undefined,
       });
       setBookedSeatNumber(res.seatNumber ?? null);
       setStep('done');
@@ -218,6 +226,23 @@ export default function ApplyPage({ params }: { params: { slug: string } }) {
         )}
         {!tenant?.upiId && (
           <p className="text-xs text-gray-400 mb-4">Please pay the admin directly, then confirm below.</p>
+        )}
+
+        {method === 'UPI' && tenant?.upiId && (
+          <div className="mb-4">
+            <label className="block text-xs text-gray-500 mb-1">
+              Payment Screenshot{requiresScreenshot ? '' : ' (optional)'}
+            </label>
+            <input
+              type="file"
+              accept="image/jpeg,image/png"
+              onChange={(e) => setPaymentScreenshot(e.target.files?.[0] ?? null)}
+              className="w-full border border-black/10 rounded-lg px-3 py-2 text-sm file:mr-3 file:border-0 file:bg-accent/10 file:text-accent file:rounded-md file:px-3 file:py-1.5 file:text-xs"
+            />
+            <p className="text-[11px] text-gray-400 mt-1">
+              After paying, take a screenshot of the confirmation and upload it here.
+            </p>
+          </div>
         )}
 
         {error && <p className="text-xs text-expiring mb-3">{error}</p>}
@@ -300,8 +325,8 @@ export default function ApplyPage({ params }: { params: { slug: string } }) {
             <input
               type="tel"
               value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              pattern="(\+?91[-\s]?|0)?[6-9]\d{9}"
+              onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+              pattern="[6-9]\d{9}"
               title="Enter a valid 10-digit Indian phone number"
               required
               className="w-full border border-black/10 rounded-lg px-3 py-2 text-sm"
