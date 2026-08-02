@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import TopBar from '@/components/TopBar';
 import StatusPill from '@/components/StatusPill';
 import RecordPaymentModal from '@/components/RecordPaymentModal';
-import { api, API_ORIGIN } from '@/lib/api';
+import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { formatDate, memberNameOf } from '@/lib/format';
 import { downloadCsv } from '@/lib/csv';
@@ -167,7 +167,7 @@ export default function PaymentsPage() {
                   <span className="text-xs bg-black/5 rounded-full px-2 py-0.5">{t.method}</span>
                   {t.screenshotUrl && (
                     <a
-                      href={`${API_ORIGIN}${t.screenshotUrl}`}
+                      href={t.screenshotUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="block text-[11px] text-accent underline mt-1"

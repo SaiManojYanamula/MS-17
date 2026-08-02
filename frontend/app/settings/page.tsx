@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
 import TopBar from '@/components/TopBar';
 import PasswordInput from '@/components/PasswordInput';
-import { api, API_ORIGIN } from '@/lib/api';
+import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 
 export default function SettingsPage() {
@@ -255,7 +255,7 @@ export default function SettingsPage() {
             </p>
             {coverImageUrl && (
               <img
-                src={`${API_ORIGIN}${coverImageUrl}`}
+                src={coverImageUrl}
                 alt="Booking page background"
                 className="w-full h-28 object-cover rounded-lg mb-2 border border-black/10"
               />

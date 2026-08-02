@@ -168,6 +168,17 @@ export const api = {
     if (data.receipt) formData.append('receipt', data.receipt);
     return request('/expenses', { method: 'POST', body: formData });
   },
+  updateExpense: (
+    id: string,
+    data: { category?: string; amount?: number; note?: string; receipt?: File | null },
+  ) => {
+    const formData = new FormData();
+    if (data.category !== undefined) formData.append('category', data.category);
+    if (data.amount !== undefined) formData.append('amount', String(data.amount));
+    if (data.note !== undefined) formData.append('note', data.note);
+    if (data.receipt) formData.append('receipt', data.receipt);
+    return request(`/expenses/${id}`, { method: 'PATCH', body: formData });
+  },
 
   inviteStaff: (data: {
     name: string;
@@ -272,6 +283,13 @@ export const api = {
   myRequests: () => request('/requests/me'),
   createRequest: (data: { type: string; message: string }) =>
     request('/requests', { method: 'POST', body: JSON.stringify(data) }),
+  createRenewalRequest: (data: { message?: string; amount: number; screenshot?: File }) => {
+    const form = new FormData();
+    if (data.message) form.append('message', data.message);
+    form.append('amount', String(data.amount));
+    if (data.screenshot) form.append('screenshot', data.screenshot);
+    return request('/requests/renewal', { method: 'POST', body: form });
+  },
   allRequests: () => request('/requests'),
   resolveRequest: (id: string) => request(`/requests/${id}/resolve`, { method: 'PATCH' }),
 };

@@ -114,6 +114,14 @@ export class MembersService {
     return new Date(d.setDate(d.getDate() + 1)); // DAILY_PASS
   }
 
+  // A renewal extends from whichever is later — the current expiry (if it
+  // hasn't passed yet) or now — so renewing early never loses paid-for days,
+  // and renewing late never backdates from an already-expired date.
+  computeRenewalExpiry(plan: string, currentExpiresAt: Date): Date {
+    const from = currentExpiresAt.getTime() > Date.now() ? currentExpiresAt : new Date();
+    return this.computeExpiry(plan, from);
+  }
+
   async create(tenantId: string, branchId: string, data: any) {
     assertValidPhone(data.phone);
     const displayId = await this.generateDisplayId(tenantId);

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
-import { api, API_ORIGIN } from '@/lib/api';
+import { api } from '@/lib/api';
 
 type TenantInfo = {
   name: string;
@@ -31,7 +31,7 @@ function Shell({
   return (
     <div
       className="min-h-screen relative overflow-hidden flex items-center justify-center bg-sidebar bg-cover bg-center px-4 py-10"
-      style={coverImageUrl ? { backgroundImage: `url(${API_ORIGIN}${coverImageUrl})` } : undefined}
+      style={coverImageUrl ? { backgroundImage: `url(${coverImageUrl})` } : undefined}
     >
       {coverImageUrl ? (
         <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/40 to-black/60" aria-hidden />

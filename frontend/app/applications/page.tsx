@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import TopBar from '@/components/TopBar';
 import NewApplicationModal from '@/components/NewApplicationModal';
-import { api, API_ORIGIN } from '@/lib/api';
+import { api } from '@/lib/api';
 import { formatDate, formatPlan } from '@/lib/format';
 
 export default function ApplicationsPage() {
@@ -94,7 +94,7 @@ export default function ApplicationsPage() {
                 <td>
                   {a.aadharUrl ? (
                     <a
-                      href={`${API_ORIGIN}${a.aadharUrl}`}
+                      href={a.aadharUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-[11px] text-accent underline"

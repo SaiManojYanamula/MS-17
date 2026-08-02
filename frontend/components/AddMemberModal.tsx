@@ -27,6 +27,8 @@ export default function AddMemberModal({
   const [joinedAt, setJoinedAt] = useState(() => new Date().toISOString().slice(0, 10));
   const [zones, setZones] = useState<any[]>([]);
   const [seatId, setSeatId] = useState('');
+  const [amount, setAmount] = useState('');
+  const [method, setMethod] = useState('UPI');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -53,6 +55,15 @@ export default function AddMemberModal({
       });
       if (seatId) {
         await api.assignSeat(seatId, member.id);
+      }
+      if (Number(amount) > 0) {
+        await api.createPayment({
+          memberId: member.id,
+          amount: Number(amount),
+          method,
+          label: `${plan} - Initial Payment`,
+          status: 'PAID',
+        });
       }
       onSuccess();
       onClose();
@@ -146,6 +157,31 @@ export default function AddMemberModal({
                 </optgroup>
               ))}
             </select>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Amount Paid (₹, optional)</label>
+              <input
+                type="number"
+                min="0"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                placeholder="0"
+                className="w-full border border-black/10 rounded-lg px-3 py-2 text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Method</label>
+              <select
+                value={method}
+                onChange={(e) => setMethod(e.target.value)}
+                className="w-full border border-black/10 rounded-lg px-3 py-2 text-sm"
+              >
+                <option value="UPI">UPI</option>
+                <option value="CASH">Cash</option>
+                <option value="CARD">Card</option>
+              </select>
+            </div>
           </div>
           <div>
             <label className="block text-xs text-gray-500 mb-1">Joining Date</label>

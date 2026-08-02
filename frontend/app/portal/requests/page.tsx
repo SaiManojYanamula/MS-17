@@ -81,7 +81,24 @@ export default function RequestsPage() {
               <tr key={r.id} className="border-b border-black/5 last:border-0">
                 {isStaff && <td className="p-4 font-medium">{r.member?.name ?? '—'}</td>}
                 <td className={isStaff ? '' : 'p-4'}>{typeLabels[r.type] ?? r.type}</td>
-                <td className="text-gray-500 max-w-xs truncate">{r.message}</td>
+                <td className="text-gray-500 max-w-xs">
+                  <div className="truncate">{r.message}</div>
+                  {r.type === 'RENEWAL' && r.amount && (
+                    <div className="text-[11px] mt-0.5">
+                      <span className="text-gray-600 font-medium">₹{r.amount} paid</span>
+                      {r.screenshotUrl && (
+                        <a
+                          href={r.screenshotUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-accent underline ml-2"
+                        >
+                          View Screenshot
+                        </a>
+                      )}
+                    </div>
+                  )}
+                </td>
                 <td>{formatDate(r.createdAt)}</td>
                 <td>
                   <span
@@ -98,6 +115,11 @@ export default function RequestsPage() {
                       <button
                         onClick={() => resolve(r.id)}
                         disabled={resolvingId === r.id}
+                        title={
+                          r.type === 'RENEWAL' && r.amount
+                            ? 'Confirms the payment, extends membership by one plan cycle, and records it under Payments'
+                            : undefined
+                        }
                         className="text-xs text-accent font-medium disabled:opacity-60"
                       >
                         {resolvingId === r.id ? 'Resolving…' : 'Resolve'}

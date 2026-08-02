@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import StatusPill from '@/components/StatusPill';
 import IdCardModal from '@/components/IdCardModal';
-import { api, API_ORIGIN } from '@/lib/api';
+import { api } from '@/lib/api';
 import { formatDate, formatPlan, seatNumberOf, planProgress } from '@/lib/format';
 
 export default function MembershipPage() {
@@ -70,7 +70,7 @@ export default function MembershipPage() {
             <div className="flex justify-between items-center pt-2 border-t border-black/5">
               <span className="text-gray-400">Aadhar Card</span>
               <a
-                href={`${API_ORIGIN}${member.aadharUrl}`}
+                href={member.aadharUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-xs text-accent underline"

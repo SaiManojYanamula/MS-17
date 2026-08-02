@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { api, API_ORIGIN } from '@/lib/api';
+import { api } from '@/lib/api';
 import PasswordInput from '@/components/PasswordInput';
 
 export default function EditMemberModal({
@@ -125,7 +125,7 @@ export default function EditMemberModal({
           )}
           {member.aadharUrl && (
             <a
-              href={`${API_ORIGIN}${member.aadharUrl}`}
+              href={member.aadharUrl}
               target="_blank"
               rel="noopener noreferrer"
               download

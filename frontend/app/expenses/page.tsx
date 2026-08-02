@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import TopBar from '@/components/TopBar';
 import AddExpenseModal from '@/components/AddExpenseModal';
-import { api, API_ORIGIN } from '@/lib/api';
+import EditExpenseModal from '@/components/EditExpenseModal';
+import { api } from '@/lib/api';
 import { formatDate } from '@/lib/format';
 import { downloadCsv } from '@/lib/csv';
 
@@ -21,6 +22,7 @@ export default function ExpensesPage() {
   const [expenses, setExpenses] = useState<any[]>([]);
   const [summary, setSummary] = useState({ thisMonth: 0, allTime: 0, count: 0 });
   const [showAdd, setShowAdd] = useState(false);
+  const [editingExpense, setEditingExpense] = useState<any>(null);
   const [error, setError] = useState('');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
@@ -147,6 +149,7 @@ export default function ExpensesPage() {
               <th className="font-normal">NOTE</th>
               <th className="font-normal">DATE</th>
               <th className="font-normal">RECEIPT</th>
+              <th className="font-normal" />
             </tr>
           </thead>
           <tbody>
@@ -169,7 +172,7 @@ export default function ExpensesPage() {
                 <td>
                   {e.receiptUrl ? (
                     <a
-                      href={`${API_ORIGIN}${e.receiptUrl}`}
+                      href={e.receiptUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-xs text-accent underline"
@@ -180,11 +183,19 @@ export default function ExpensesPage() {
                     <span className="text-xs text-gray-300">—</span>
                   )}
                 </td>
+                <td className="p-4">
+                  <button
+                    onClick={() => setEditingExpense(e)}
+                    className="text-xs text-accent font-medium"
+                  >
+                    Edit
+                  </button>
+                </td>
               </tr>
             ))}
             {filteredExpenses.length === 0 && (
               <tr>
-                <td colSpan={5} className="p-8 text-center text-gray-400">
+                <td colSpan={6} className="p-8 text-center text-gray-400">
                   {hasDateFilter ? 'No expenses in this date range.' : 'No expenses recorded yet.'}
                 </td>
               </tr>
@@ -194,6 +205,13 @@ export default function ExpensesPage() {
       </div>
 
       {showAdd && <AddExpenseModal onClose={() => setShowAdd(false)} onSuccess={refetch} />}
+      {editingExpense && (
+        <EditExpenseModal
+          expense={editingExpense}
+          onClose={() => setEditingExpense(null)}
+          onSuccess={refetch}
+        />
+      )}
     </div>
   );
 }

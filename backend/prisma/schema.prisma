@@ -335,6 +335,8 @@ model Request {
   memberId  String
   type      RequestType
   message   String
+  amount        Int? // set on RENEWAL requests — the student's self-reported payment amount, verified by staff on resolve
+  screenshotUrl String? // proof-of-payment screenshot for a RENEWAL request
   status    RequestStatus @default(OPEN)
   createdAt DateTime      @default(now())
 
