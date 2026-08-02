@@ -211,6 +211,7 @@ export const api = {
     name: string;
     slug: string;
     branchName?: string;
+    branchAddress?: string;
     ownerName: string;
     ownerEmail: string;
     ownerPassword: string;

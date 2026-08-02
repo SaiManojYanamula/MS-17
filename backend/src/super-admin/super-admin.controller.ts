@@ -19,6 +19,7 @@ export class SuperAdminController {
       name: string;
       slug: string;
       branchName?: string;
+      branchAddress?: string;
       ownerName: string;
       ownerEmail: string;
       ownerPassword: string;

@@ -142,6 +142,11 @@ export class MembersService {
   async update(tenantId: string, id: string, data: any) {
     assertValidPhone(data.phone);
     const existing = await this.findOne(tenantId, id); // ensures tenant ownership before mutating
+    // A renewal (expiresAt pushed forward) starts a fresh reminder cycle —
+    // otherwise the member would never get reminded again next time they're due.
+    if (data.expiresAt && new Date(data.expiresAt).getTime() !== existing.expiresAt.getTime()) {
+      data.feeReminderSentAt = null;
+    }
     const member = await this.prisma.member.update({ where: { id }, data });
     if (member.phone && !existing.user) {
       await this.createLoginIfMissing(tenantId, existing.branchId, member.id, member.name, member.phone);

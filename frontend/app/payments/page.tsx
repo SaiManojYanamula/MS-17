@@ -27,6 +27,7 @@ export default function PaymentsPage() {
   const [showRecord, setShowRecord] = useState(false);
   const [error, setError] = useState('');
   const [refundingId, setRefundingId] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
 
   const refetch = () => {
     api.paymentsSummary().then(setSummary).catch(() => {});
@@ -52,6 +53,12 @@ export default function PaymentsPage() {
     );
   };
 
+  const filteredTransactions = transactions.filter((t: any) => {
+    if (!search.trim()) return true;
+    const q = search.trim().toLowerCase();
+    return memberNameOf(t.member).toLowerCase().includes(q) || (t.member?.phone ?? '').includes(q);
+  });
+
   const refund = async (id: string) => {
     setError('');
     const snapshot = transactions;
@@ -76,7 +83,7 @@ export default function PaymentsPage() {
           <p className="text-sm text-gray-500">Collections, dues, and transaction history</p>
         </div>
         <div className="flex items-center gap-3">
-          <TopBar />
+          <TopBar placeholder="Search by member name or phone..." value={search} onChange={setSearch} />
           <button
             onClick={exportCsv}
             className="border border-black/10 text-sm px-4 py-2 rounded-lg shrink-0"
@@ -142,7 +149,7 @@ export default function PaymentsPage() {
             </tr>
           </thead>
           <tbody>
-            {transactions.map((t: any) => (
+            {filteredTransactions.map((t: any) => (
               <tr key={t.id} className="border-b border-black/5 last:border-0">
                 <td className="p-4">
                   <div className="flex items-center gap-3">

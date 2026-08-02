@@ -175,7 +175,15 @@ export class PublicController {
       const seat = await this.prisma.seat.findUnique({ where: { id: body.seatId } });
 
       // Fire-and-forget — a notification hiccup should never fail the booking itself.
-      this.notificationsService.notifyBookingConfirmed(tenant.id, body.phone, tenant.name, seat?.seatNumber);
+      this.notificationsService.notifyBookingConfirmed(
+        tenant.id,
+        body.phone,
+        tenant.name,
+        member.name,
+        seat?.seatNumber,
+        amount > 0 ? amount : undefined,
+        `${body.plan} - Initial Payment`,
+      );
 
       return { member, seatNumber: seat?.seatNumber };
     } catch (err) {

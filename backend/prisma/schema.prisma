@@ -226,6 +226,7 @@ model Member {
   status    String   @default("Active") // Active / Expiring Soon / Expired
   joinedAt  DateTime @default(now())
   aadharUrl String? // path to uploaded Aadhar card image/PDF, carried over from Application on approval
+  feeReminderSentAt DateTime? // last time the fee-due WhatsApp reminder was sent for the *current* expiresAt — reset whenever expiresAt changes (renewal), so a renewed member can be reminded again next cycle
 
   tenant     Tenant       @relation(fields: [tenantId], references: [id])
   branch     Branch       @relation(fields: [branchId], references: [id])

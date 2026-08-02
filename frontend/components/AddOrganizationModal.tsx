@@ -14,6 +14,7 @@ export default function AddOrganizationModal({
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
   const [branchName, setBranchName] = useState('Main Branch');
+  const [branchAddress, setBranchAddress] = useState('');
   const [ownerName, setOwnerName] = useState('');
   const [ownerEmail, setOwnerEmail] = useState('');
   const [ownerPassword, setOwnerPassword] = useState('');
@@ -25,7 +26,7 @@ export default function AddOrganizationModal({
     setError('');
     setSubmitting(true);
     try {
-      await api.createOrganization({ name, slug, branchName, ownerName, ownerEmail, ownerPassword });
+      await api.createOrganization({ name, slug, branchName, branchAddress, ownerName, ownerEmail, ownerPassword });
       onSuccess();
       onClose();
     } catch (err: any) {
@@ -64,6 +65,15 @@ export default function AddOrganizationModal({
             <input
               value={branchName}
               onChange={(e) => setBranchName(e.target.value)}
+              className="w-full border border-black/10 rounded-lg px-3 py-2 text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Branch Address</label>
+            <input
+              value={branchAddress}
+              onChange={(e) => setBranchAddress(e.target.value)}
+              placeholder="e.g. 2nd Floor, MG Road, Hyderabad"
               className="w-full border border-black/10 rounded-lg px-3 py-2 text-sm"
             />
           </div>

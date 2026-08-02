@@ -1,5 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../prisma.service';
+
+// Members due within this many days get one reminder per billing cycle.
+const REMINDER_WINDOW_DAYS = 1;
 
 // Provider-agnostic SMS/WhatsApp sending. Nothing actually goes out until
 // the matching env vars are set — until then every call just logs what
@@ -71,21 +75,19 @@ export class NotificationsService {
     }
   }
 
-  // NOTE: WhatsApp Business API requires a pre-approved template for the
-  // first message to someone (free-form text only works within a 24h window
-  // after *they* message *you* first). Until real templates ("Fee Due",
-  // "Payment Confirmation", etc.) are created and approved in Meta Business
-  // Manager, this sends Meta's universal `hello_world` sample template as a
-  // connectivity smoke test — `message` is logged for visibility but isn't
-  // the actual WhatsApp content yet. Swap the template name/components below
-  // once real templates are approved.
-  async sendWhatsApp(
+  // WhatsApp Business API requires a pre-approved template for the first
+  // message to someone (free-form text only works within a 24h window after
+  // *they* message *you* first — see sendWhatsAppReply below for that case).
+  // `params` fill the template's numbered placeholders ({{1}}, {{2}}, ...) in
+  // order — must match exactly what was approved in Meta Business Manager.
+  async sendWhatsAppTemplate(
     phone: string,
-    message: string,
+    templateName: string,
+    params: string[],
     tenantId?: string,
   ): Promise<{ sent: boolean; reason?: string }> {
     if (!this.whatsappConfigured) {
-      this.logger.log(`[WhatsApp not configured] would send to ${phone}: ${message}`);
+      this.logger.log(`[WhatsApp not configured] would send "${templateName}" to ${phone}: ${params.join(', ')}`);
       return { sent: false, reason: 'WHATSAPP_API_KEY not set' };
     }
 
@@ -102,26 +104,51 @@ export class NotificationsService {
             messaging_product: 'whatsapp',
             to: this.toWhatsAppNumber(phone),
             type: 'template',
-            template: { name: 'hello_world', language: { code: 'en_US' } },
+            template: {
+              name: templateName,
+              language: { code: 'en' },
+              components: params.length
+                ? [{ type: 'body', parameters: params.map((text) => ({ type: 'text', text })) }]
+                : [],
+            },
           }),
         },
       );
 
       if (!res.ok) {
         const body = await res.text();
-        this.logger.error(`WhatsApp send failed for ${phone}: ${res.status} ${body}`);
+        this.logger.error(`WhatsApp template "${templateName}" failed for ${phone}: ${res.status} ${body}`);
         this.logWhatsAppUsage(tenantId, phone, 'outbound', 'failed');
         return { sent: false, reason: `Provider error ${res.status}` };
       }
 
-      this.logger.log(`WhatsApp sent to ${phone} (intended message: ${message})`);
+      this.logger.log(`WhatsApp template "${templateName}" sent to ${phone}`);
       this.logWhatsAppUsage(tenantId, phone, 'outbound', 'sent');
       return { sent: true };
     } catch (err) {
-      this.logger.error(`WhatsApp send failed for ${phone}`, err as Error);
+      this.logger.error(`WhatsApp template "${templateName}" send failed for ${phone}`, err as Error);
       this.logWhatsAppUsage(tenantId, phone, 'outbound', 'failed');
       return { sent: false, reason: 'Send failed' };
     }
+  }
+
+  // Approved template: "Hi {{1}}, your {{2}} membership fee at {{3}} is due
+  // on {{4}}. Please renew soon to keep your seat."
+  async sendFeeDueReminder(
+    phone: string,
+    memberName: string,
+    plan: string,
+    tenantName: string,
+    dueDate: string,
+    tenantId?: string,
+  ) {
+    return this.sendWhatsAppTemplate(phone, 'ee_due_reminder_v1', [memberName, plan, tenantName, dueDate], tenantId);
+  }
+
+  // Approved template: "Hi {{1}}, we've received your payment of ₹{{2}} for
+  // {{3}}. Thank you!"
+  async sendPaymentConfirmation(phone: string, memberName: string, amount: number, label: string, tenantId?: string) {
+    return this.sendWhatsAppTemplate(phone, 'payment_confirmation', [memberName, String(amount), label], tenantId);
   }
 
   // Free-form text reply — only valid within 24h of the *recipient* messaging
@@ -172,12 +199,65 @@ export class NotificationsService {
     }
   }
 
+  // 9 AM — a reasonable hour to be messaging people about money.
+  @Cron(CronExpression.EVERY_DAY_AT_9AM)
+  async handleFeeDueReminders() {
+    try {
+      await this.sendFeeDueReminders();
+    } catch (err) {
+      this.logger.error('Scheduled fee-due reminder run failed', err as Error);
+    }
+  }
+
+  // Finds members expiring within REMINDER_WINDOW_DAYS, not yet reminded for
+  // their *current* expiry (feeReminderSentAt is reset on every renewal —
+  // see MembersService.update), and whose tenant has both expiry alerts and
+  // WhatsApp enabled. Marks each as reminded up front so a slow provider or a
+  // crash mid-batch can't cause a duplicate send on the next run.
+  async sendFeeDueReminders() {
+    const now = new Date();
+    const windowEnd = new Date(now.getTime() + REMINDER_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+
+    const members = await this.prisma.member.findMany({
+      where: {
+        expiresAt: { gte: now, lte: windowEnd },
+        feeReminderSentAt: null,
+        phone: { not: null },
+        tenant: { notifyExpiry: true, notifyWhatsapp: true, whatsappAccessEnabled: true },
+      },
+      select: { id: true, name: true, phone: true, plan: true, expiresAt: true, tenant: { select: { id: true, name: true } } },
+    });
+
+    for (const member of members) {
+      await this.prisma.member.update({ where: { id: member.id }, data: { feeReminderSentAt: now } });
+      const dueDate = member.expiresAt.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+      await this.sendFeeDueReminder(
+        member.phone as string,
+        member.name,
+        member.plan,
+        member.tenant.name,
+        dueDate,
+        member.tenant.id,
+      ).catch(() => {});
+    }
+
+    return { checked: members.length };
+  }
+
   // Fire-and-forget on both channels — booking confirmation should never
   // fail or slow down because a notification provider hiccuped. Respects the
   // tenant's own notification preferences (Settings page): payments/booking
   // alerts can be turned off entirely, and WhatsApp is an opt-in channel on
   // top of SMS.
-  async notifyBookingConfirmed(tenantId: string, phone: string, tenantName: string, seatNumber?: number) {
+  async notifyBookingConfirmed(
+    tenantId: string,
+    phone: string,
+    tenantName: string,
+    memberName: string,
+    seatNumber?: number,
+    paymentAmount?: number,
+    paymentLabel?: string,
+  ) {
     const tenant = await this.prisma.tenant.findUnique({
       where: { id: tenantId },
       select: { notifyPayments: true, notifyWhatsapp: true, whatsappAccessEnabled: true },
@@ -192,8 +272,12 @@ export class NotificationsService {
     // Defense in depth — the write-time gate in tenants.service.ts should
     // already prevent notifyWhatsapp from being true without this, but never
     // trust a stored flag alone for something that costs real money.
-    if (tenant.notifyWhatsapp && tenant.whatsappAccessEnabled) {
-      this.sendWhatsApp(phone, message, tenantId).catch(() => {});
+    // The approved "payment_confirmation" template only makes sense when a
+    // payment actually happened — a free/no-payment booking just gets SMS.
+    if (tenant.notifyWhatsapp && tenant.whatsappAccessEnabled && paymentAmount && paymentAmount > 0) {
+      this.sendPaymentConfirmation(phone, memberName, paymentAmount, paymentLabel || 'Booking', tenantId).catch(
+        () => {},
+      );
     }
   }
 }
