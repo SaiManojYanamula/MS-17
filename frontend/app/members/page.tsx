@@ -6,6 +6,7 @@ import TopBar from '@/components/TopBar';
 import StatusPill from '@/components/StatusPill';
 import AddMemberModal from '@/components/AddMemberModal';
 import EditMemberModal from '@/components/EditMemberModal';
+import RenewMemberModal from '@/components/RenewMemberModal';
 import ImportMembersModal from '@/components/ImportMembersModal';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
@@ -32,6 +33,7 @@ export default function MembersPage() {
   const [showAdd, setShowAdd] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [editingMember, setEditingMember] = useState<any>(null);
+  const [renewingMember, setRenewingMember] = useState<any>(null);
   const [error, setError] = useState('');
   const [view, setView] = useState<'grid' | 'table'>('grid');
   const highlightId = useSearchParams().get('highlight');
@@ -208,6 +210,12 @@ export default function MembersPage() {
                   <td className="p-4">
                     <div className="flex items-center gap-2">
                       <button
+                        onClick={() => setRenewingMember(m)}
+                        className="text-xs text-free font-medium"
+                      >
+                        Renew
+                      </button>
+                      <button
                         onClick={() => setEditingMember(m)}
                         className="text-xs text-accent font-medium"
                       >
@@ -255,6 +263,13 @@ export default function MembersPage() {
                 </div>
               </div>
               <div className="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                <button
+                  onClick={() => setRenewingMember(m)}
+                  title="Renew"
+                  className="w-7 h-7 rounded-full hover:bg-free/10 hover:text-free text-xs"
+                >
+                  ↻
+                </button>
                 <button
                   onClick={() => setEditingMember(m)}
                   title="Edit"
@@ -317,6 +332,13 @@ export default function MembersPage() {
 
       {showAdd && <AddMemberModal onClose={() => setShowAdd(false)} onSuccess={refetch} />}
       {showImport && <ImportMembersModal onClose={() => setShowImport(false)} onSuccess={refetch} />}
+      {renewingMember && (
+        <RenewMemberModal
+          member={renewingMember}
+          onClose={() => setRenewingMember(null)}
+          onSuccess={refetch}
+        />
+      )}
       {editingMember && (
         <EditMemberModal
           member={editingMember}

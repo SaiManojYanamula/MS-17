@@ -126,6 +126,27 @@ export class MembersService {
     return this.computeExpiry(plan, from);
   }
 
+  // Admin-side renewal — same effect as staff resolving a student's portal
+  // renewal request (extend expiry + book the payment), for a student who
+  // paid in person or by phone instead of through the portal.
+  async renew(tenantId: string, branchId: string, memberId: string, amount: number, method: string) {
+    const member = await this.findOne(tenantId, memberId);
+    const newExpiry = this.computeRenewalExpiry(member.plan, member.expiresAt);
+    await this.update(tenantId, memberId, { expiresAt: newExpiry });
+    await this.prisma.payment.create({
+      data: {
+        tenantId,
+        branchId,
+        memberId,
+        amount,
+        method: method as any,
+        status: 'PAID',
+        label: `${member.plan} - Renewal`,
+      },
+    });
+    return this.findOne(tenantId, memberId);
+  }
+
   async create(tenantId: string, branchId: string, data: any) {
     assertValidPhone(data.phone);
     // Same phone re-added while their existing membership is still active

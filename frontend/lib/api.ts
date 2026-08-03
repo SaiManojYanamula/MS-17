@@ -132,6 +132,8 @@ export const api = {
     expiresAt: string;
   }>) => request(`/members/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
   deleteMember: (id: string) => request(`/members/${id}`, { method: 'DELETE' }),
+  renewMember: (id: string, amount: number, method: string) =>
+    request(`/members/${id}/renew`, { method: 'PATCH', body: JSON.stringify({ amount, method }) }),
   importMembers: (file: File) => {
     const formData = new FormData();
     formData.append('file', file);

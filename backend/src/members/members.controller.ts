@@ -69,6 +69,19 @@ export class MembersController {
     return this.membersService.update(req.tenantId!, id, body);
   }
 
+  // Admin-side equivalent of the student portal's "renew + auto-resolve"
+  // flow — for a student who paid in person/by phone instead of through the
+  // portal. One action instead of Record Payment + Edit Member's expiry separately.
+  @Patch(':id/renew')
+  @Roles('TENANT_OWNER', 'BRANCH_MANAGER', 'STAFF')
+  renew(
+    @Req() req: TenantRequest,
+    @Param('id') id: string,
+    @Body() body: { amount: number; method: string },
+  ) {
+    return this.membersService.renew(req.tenantId!, req.branchId!, id, body.amount, body.method);
+  }
+
   @Delete(':id')
   @Roles('TENANT_OWNER', 'BRANCH_MANAGER')
   remove(@Req() req: TenantRequest, @Param('id') id: string) {

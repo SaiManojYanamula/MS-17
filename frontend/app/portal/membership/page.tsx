@@ -66,19 +66,6 @@ export default function MembershipPage() {
             <span className="text-gray-400">Status</span>
             <StatusPill status={member.status} />
           </div>
-          {member.aadharUrl && (
-            <div className="flex justify-between items-center pt-2 border-t border-black/5">
-              <span className="text-gray-400">Aadhar Card</span>
-              <a
-                href={member.aadharUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs text-accent underline"
-              >
-                View
-              </a>
-            </div>
-          )}
         </div>
       </div>
 
