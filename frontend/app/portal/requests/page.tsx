@@ -98,6 +98,11 @@ export default function RequestsPage() {
                       )}
                     </div>
                   )}
+                  {r.type === 'SEAT_CHANGE' && r.requestedSeatNumber && (
+                    <div className="text-[11px] mt-0.5 text-gray-600 font-medium">
+                      Wants seat #{r.requestedSeatNumber}
+                    </div>
+                  )}
                 </td>
                 <td>{formatDate(r.createdAt)}</td>
                 <td>
@@ -118,7 +123,9 @@ export default function RequestsPage() {
                         title={
                           r.type === 'RENEWAL' && r.amount
                             ? 'Confirms the payment, extends membership by one plan cycle, and records it under Payments'
-                            : undefined
+                            : r.type === 'SEAT_CHANGE' && r.requestedSeatNumber
+                              ? `Moves the student to seat #${r.requestedSeatNumber} if it's still free`
+                              : undefined
                         }
                         className="text-xs text-accent font-medium disabled:opacity-60"
                       >

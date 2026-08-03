@@ -44,8 +44,18 @@ export class RequestsController {
     return this.requestsService.findMine(req.tenantId!, req.memberId);
   }
 
+  // Student self-service — the free seats they can pick from for a
+  // SEAT_CHANGE request, scoped to their own branch.
+  @Get('available-seats')
+  availableSeats(@Req() req: TenantRequest) {
+    return this.requestsService.availableSeats(req.tenantId!, req.branchId!);
+  }
+
   @Post()
-  create(@Req() req: TenantRequest, @Body() body: { type: string; message: string }) {
+  create(
+    @Req() req: TenantRequest,
+    @Body() body: { type: string; message: string; requestedSeatNumber?: number },
+  ) {
     if (!req.memberId) {
       throw new ForbiddenException('No member profile linked to this account');
     }

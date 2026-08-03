@@ -25,6 +25,14 @@ export default function SettingsPage() {
   const [profileError, setProfileError] = useState('');
   const [profileSaved, setProfileSaved] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
+
+  const [monthlyFee, setMonthlyFee] = useState('');
+  const [quarterlyFee, setQuarterlyFee] = useState('');
+  const [yearlyFee, setYearlyFee] = useState('');
+  const [dailyPassFee, setDailyPassFee] = useState('');
+  const [feeError, setFeeError] = useState('');
+  const [feeSaved, setFeeSaved] = useState(false);
+  const [savingFees, setSavingFees] = useState(false);
   const [qrDataUrl, setQrDataUrl] = useState('');
   const [linkCopied, setLinkCopied] = useState(false);
 
@@ -44,6 +52,10 @@ export default function SettingsPage() {
         if (res.tenant?.upiId) setUpiId(res.tenant.upiId);
         if (res.tenant?.upiPhone) setUpiPhone(res.tenant.upiPhone);
         if (res.tenant?.coverImageUrl) setCoverImageUrl(res.tenant.coverImageUrl);
+        if (res.tenant?.monthlyFee != null) setMonthlyFee(String(res.tenant.monthlyFee));
+        if (res.tenant?.quarterlyFee != null) setQuarterlyFee(String(res.tenant.quarterlyFee));
+        if (res.tenant?.yearlyFee != null) setYearlyFee(String(res.tenant.yearlyFee));
+        if (res.tenant?.dailyPassFee != null) setDailyPassFee(String(res.tenant.dailyPassFee));
         if (res.tenant?.notifyExpiry !== undefined) setNotifyExpiry(res.tenant.notifyExpiry);
         if (res.tenant?.notifyPayments !== undefined) setNotifyPayments(res.tenant.notifyPayments);
         if (res.tenant?.notifyWhatsapp !== undefined) setNotifyWhatsapp(res.tenant.notifyWhatsapp);
@@ -113,6 +125,26 @@ export default function SettingsPage() {
       setProfileError(err.message || 'Could not save changes');
     } finally {
       setSavingProfile(false);
+    }
+  };
+
+  const saveFees = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFeeError('');
+    setFeeSaved(false);
+    setSavingFees(true);
+    try {
+      await api.updateTenant({
+        monthlyFee: monthlyFee ? Number(monthlyFee) : null,
+        quarterlyFee: quarterlyFee ? Number(quarterlyFee) : null,
+        yearlyFee: yearlyFee ? Number(yearlyFee) : null,
+        dailyPassFee: dailyPassFee ? Number(dailyPassFee) : null,
+      });
+      setFeeSaved(true);
+    } catch (err: any) {
+      setFeeError(err.message || 'Could not save fees');
+    } finally {
+      setSavingFees(false);
     }
   };
 
@@ -316,6 +348,84 @@ export default function SettingsPage() {
           ) : (
             <p className="text-sm text-gray-400">Loading QR code…</p>
           )}
+        </div>
+
+        <div className="bg-card rounded-xl p-5 border border-black/5">
+          <h2 className="font-serif font-semibold mb-1">Plan Fees</h2>
+          <p className="text-xs text-gray-500 mb-4">
+            Standard fee per plan — powers the "Due" amount shown on the Payments page (fee minus
+            what a student has actually paid). Leave blank for a plan if you don't want Due
+            tracked for it.
+          </p>
+          <form onSubmit={saveFees}>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Monthly (₹)</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={monthlyFee}
+                  onChange={(e) => {
+                    setMonthlyFee(e.target.value);
+                    setFeeSaved(false);
+                  }}
+                  placeholder="e.g. 2000"
+                  className="w-full border border-black/10 rounded-lg px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Quarterly (₹)</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={quarterlyFee}
+                  onChange={(e) => {
+                    setQuarterlyFee(e.target.value);
+                    setFeeSaved(false);
+                  }}
+                  placeholder="e.g. 5500"
+                  className="w-full border border-black/10 rounded-lg px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Yearly (₹)</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={yearlyFee}
+                  onChange={(e) => {
+                    setYearlyFee(e.target.value);
+                    setFeeSaved(false);
+                  }}
+                  placeholder="e.g. 20000"
+                  className="w-full border border-black/10 rounded-lg px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Daily Pass (₹)</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={dailyPassFee}
+                  onChange={(e) => {
+                    setDailyPassFee(e.target.value);
+                    setFeeSaved(false);
+                  }}
+                  placeholder="e.g. 100"
+                  className="w-full border border-black/10 rounded-lg px-3 py-2 text-sm"
+                />
+              </div>
+            </div>
+            {feeError && <p className="text-xs text-expiring mb-3">{feeError}</p>}
+            {feeSaved && <p className="text-xs text-free mb-3">Saved.</p>}
+            <button
+              type="submit"
+              disabled={savingFees}
+              className="bg-sidebar text-white text-sm px-4 py-2 rounded-lg disabled:opacity-60"
+            >
+              {savingFees ? 'Saving…' : 'Save Fees'}
+            </button>
+          </form>
         </div>
 
         <div className="bg-card rounded-xl p-5 border border-black/5">

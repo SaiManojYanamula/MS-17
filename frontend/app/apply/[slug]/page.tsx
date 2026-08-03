@@ -12,6 +12,7 @@ type TenantInfo = {
   branches: { id: string; name: string }[];
 };
 type Seat = { id: string; seatNumber: number; zoneId: string };
+type Zone = { id: string; name: string; imageUrl: string | null };
 type Step = 'loading' | 'form' | 'payment' | 'done' | 'error';
 
 // Defined at module scope (not inside ApplyPage) so its identity stays
@@ -58,6 +59,7 @@ export default function ApplyPage({ params }: { params: { slug: string } }) {
   const [tenant, setTenant] = useState<TenantInfo | null>(null);
   const [branchId, setBranchId] = useState('');
   const [seats, setSeats] = useState<Seat[]>([]);
+  const [zones, setZones] = useState<Zone[]>([]);
   const [seatsLoading, setSeatsLoading] = useState(false);
   const [seatId, setSeatId] = useState('');
 
@@ -97,8 +99,14 @@ export default function ApplyPage({ params }: { params: { slug: string } }) {
     setSeatId('');
     api
       .publicSeats(slug, branchId)
-      .then(setSeats)
-      .catch(() => setSeats([]))
+      .then((res: { seats: Seat[]; zones: Zone[] }) => {
+        setSeats(res.seats ?? []);
+        setZones(res.zones ?? []);
+      })
+      .catch(() => {
+        setSeats([]);
+        setZones([]);
+      })
       .finally(() => setSeatsLoading(false));
   }, [branchId, slug]);
 
@@ -291,21 +299,43 @@ export default function ApplyPage({ params }: { params: { slug: string } }) {
           ) : seats.length === 0 ? (
             <p className="text-sm text-gray-400">No seats available right now — please check back later.</p>
           ) : (
-            <div className="grid grid-cols-8 gap-2">
-              {seats.map((s) => (
-                <button
-                  key={s.id}
-                  type="button"
-                  onClick={() => setSeatId(s.id)}
-                  className={`aspect-square rounded-lg border text-xs font-medium transition-all ${
-                    seatId === s.id
-                      ? 'bg-accent text-white border-accent shadow-soft scale-105'
-                      : 'bg-free/10 border-free/40 hover:bg-free/20 hover:border-free hover:scale-105'
-                  }`}
-                >
-                  {s.seatNumber}
-                </button>
-              ))}
+            <div className="space-y-4">
+              {zones
+                .map((z) => ({ zone: z, zoneSeats: seats.filter((s) => s.zoneId === z.id) }))
+                .filter(({ zoneSeats }) => zoneSeats.length > 0)
+                .map(({ zone, zoneSeats }) => (
+                  <div key={zone.id}>
+                    <div className="flex items-center gap-2 mb-1.5">
+                      {zone.imageUrl && (
+                        <img
+                          src={zone.imageUrl}
+                          alt={`${zone.name} photo`}
+                          className="w-10 h-10 object-cover rounded-lg border border-black/10 shrink-0"
+                        />
+                      )}
+                      <span className="text-xs font-medium text-gray-600">
+                        {zone.name} · Seats {Math.min(...zoneSeats.map((s) => s.seatNumber))}–
+                        {Math.max(...zoneSeats.map((s) => s.seatNumber))}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-8 gap-2">
+                      {zoneSeats.map((s) => (
+                        <button
+                          key={s.id}
+                          type="button"
+                          onClick={() => setSeatId(s.id)}
+                          className={`aspect-square rounded-lg border text-xs font-medium transition-all ${
+                            seatId === s.id
+                              ? 'bg-accent text-white border-accent shadow-soft scale-105'
+                              : 'bg-free/10 border-free/40 hover:bg-free/20 hover:border-free hover:scale-105'
+                          }`}
+                        >
+                          {s.seatNumber}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
             </div>
           )}
         </div>
@@ -354,6 +384,7 @@ export default function ApplyPage({ params }: { params: { slug: string } }) {
             >
               <option value="MONTHLY">Monthly</option>
               <option value="QUARTERLY">Quarterly</option>
+              <option value="YEARLY">Yearly</option>
               <option value="DAILY_PASS">Daily Pass</option>
             </select>
           </div>

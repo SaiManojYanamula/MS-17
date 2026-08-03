@@ -1,15 +1,67 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 
+// Start of the member's *current* billing cycle, derived by walking back
+// one plan-length from their expiry — there's no separate "cycle start"
+// field, so this is how we know which past payments count toward this
+// cycle's fee (e.g. an advance paid at booking + the remainder paid on
+// joining day should both count, but a payment from a prior renewal shouldn't).
+function cycleStart(plan: string, expiresAt: Date): Date {
+  const d = new Date(expiresAt);
+  if (plan === 'MONTHLY') d.setMonth(d.getMonth() - 1);
+  else if (plan === 'QUARTERLY') d.setMonth(d.getMonth() - 3);
+  else if (plan === 'YEARLY') d.setMonth(d.getMonth() - 12);
+  else d.setDate(d.getDate() - 1); // DAILY_PASS
+  return d;
+}
+
 @Injectable()
 export class PaymentsService {
   constructor(private prisma: PrismaService) {}
 
   async findAll(tenantId: string, branchId: string, status?: 'PAID' | 'PENDING' | 'REFUNDED') {
-    return this.prisma.payment.findMany({
-      where: { tenantId, branchId, ...(status ? { status } : {}) },
-      include: { member: true },
-      orderBy: { createdAt: 'desc' },
+    const [payments, tenant] = await Promise.all([
+      this.prisma.payment.findMany({
+        where: { tenantId, branchId, ...(status ? { status } : {}) },
+        include: { member: true },
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.tenant.findUnique({
+        where: { id: tenantId },
+        select: { monthlyFee: true, quarterlyFee: true, yearlyFee: true, dailyPassFee: true },
+      }),
+    ]);
+
+    const feeByPlan: Record<string, number | null | undefined> = {
+      MONTHLY: tenant?.monthlyFee,
+      QUARTERLY: tenant?.quarterlyFee,
+      YEARLY: tenant?.yearlyFee,
+      DAILY_PASS: tenant?.dailyPassFee,
+    };
+
+    // A student can pay in installments (e.g. an advance to book the seat,
+    // then the rest on joining day) — Due has to be the *cumulative*
+    // shortfall for the member's current cycle, not just this one
+    // transaction, or a second installment would wrongly look like a fresh
+    // ₹0-paid charge instead of closing out the balance.
+    const memberIds = [...new Set(payments.map((p) => p.memberId))];
+    const allPaidForMembers = memberIds.length
+      ? await this.prisma.payment.findMany({
+          where: { tenantId, memberId: { in: memberIds }, status: 'PAID' },
+          select: { memberId: true, amount: true, createdAt: true },
+        })
+      : [];
+
+    return payments.map((p) => {
+      const fee = feeByPlan[p.member.plan];
+      if (fee == null) return { ...p, due: null };
+
+      const start = cycleStart(p.member.plan, p.member.expiresAt);
+      const totalPaid = allPaidForMembers
+        .filter((x) => x.memberId === p.memberId && x.createdAt >= start)
+        .reduce((sum, x) => sum + x.amount, 0);
+
+      return { ...p, due: Math.max(fee - totalPaid, 0) };
     });
   }
 

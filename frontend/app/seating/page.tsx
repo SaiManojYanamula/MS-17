@@ -27,6 +27,24 @@ export default function SeatingPage() {
   const [paymentMethod, setPaymentMethod] = useState('UPI');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [uploadingZoneImage, setUploadingZoneImage] = useState<string | null>(null);
+  const [view, setView] = useState<'grid' | 'table'>('grid');
+  const [payments, setPayments] = useState<any[]>([]);
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+
+  const uploadZoneImage = async (zoneId: string, file: File) => {
+    setError('');
+    setUploadingZoneImage(zoneId);
+    try {
+      await api.uploadZoneImage(zoneId, file);
+      refetchZones();
+    } catch (err: any) {
+      setError(err.message || 'Could not upload photo');
+    } finally {
+      setUploadingZoneImage(null);
+    }
+  };
 
   const refetchZones = () => {
     api.seatMap().then(setZones).catch(() => {});
@@ -35,7 +53,29 @@ export default function SeatingPage() {
   useEffect(() => {
     refetchZones();
     api.members().then((res) => setMembers(res.members ?? [])).catch(() => {});
+    api.payments().then(setPayments).catch(() => {});
   }, []);
+
+  // Latest PAID payment per member — powers the "Last Payment" column.
+  const latestPaymentByMember = new Map<string, any>();
+  for (const pay of payments) {
+    if (pay.status !== 'PAID') continue;
+    const existing = latestPaymentByMember.get(pay.memberId);
+    if (!existing || new Date(pay.createdAt) > new Date(existing.createdAt)) {
+      latestPaymentByMember.set(pay.memberId, pay);
+    }
+  }
+
+  const hasDateFilter = !!(fromDate || toDate);
+  const paidInRange = (pay: any) => {
+    const at = new Date(pay.createdAt).getTime();
+    if (fromDate && at < new Date(fromDate).getTime()) return false;
+    if (toDate && at > new Date(toDate).getTime() + 24 * 60 * 60 * 1000 - 1) return false;
+    return true;
+  };
+  const membersPaidInRange = hasDateFilter
+    ? new Set(payments.filter((p) => p.status === 'PAID' && paidInRange(p)).map((p) => p.memberId))
+    : null;
 
   useEffect(() => {
     setEditing(false);
@@ -84,6 +124,7 @@ export default function SeatingPage() {
       }
       setSeat(await api.seatDetail(selectedSeatId));
       refetchZones();
+      api.payments().then(setPayments).catch(() => {});
       setAssignMemberId('');
       setPaymentAmount('');
       setPaymentMethod('UPI');
@@ -156,6 +197,20 @@ export default function SeatingPage() {
         </div>
         <div className="flex items-center gap-3">
           <TopBar placeholder="Search by seat number or member..." value={search} onChange={setSearch} />
+          <div className="flex items-center border border-black/10 rounded-lg overflow-hidden shrink-0 text-sm">
+            <button
+              onClick={() => setView('grid')}
+              className={`px-3 py-2 ${view === 'grid' ? 'bg-sidebar text-white' : 'bg-white text-gray-500'}`}
+            >
+              Grid
+            </button>
+            <button
+              onClick={() => setView('table')}
+              className={`px-3 py-2 ${view === 'table' ? 'bg-sidebar text-white' : 'bg-white text-gray-500'}`}
+            >
+              Table
+            </button>
+          </div>
           {canAddZone && (
             <button
               onClick={() => setShowAddZone(true)}
@@ -174,6 +229,115 @@ export default function SeatingPage() {
         <span className="text-gray-400">· {seatCounts.total} total seats</span>
       </div>
 
+      {view === 'table' && (
+        <div className="bg-card rounded-xl p-4 border border-black/5 mb-4 flex flex-wrap items-end gap-3">
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Payments From</label>
+            <input
+              type="date"
+              value={fromDate}
+              onChange={(e) => setFromDate(e.target.value)}
+              className="border border-black/10 rounded-lg px-3 py-1.5 text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">To</label>
+            <input
+              type="date"
+              value={toDate}
+              onChange={(e) => setToDate(e.target.value)}
+              className="border border-black/10 rounded-lg px-3 py-1.5 text-sm"
+            />
+          </div>
+          {hasDateFilter && (
+            <button
+              onClick={() => {
+                setFromDate('');
+                setToDate('');
+              }}
+              className="text-xs text-gray-400 underline"
+            >
+              Clear
+            </button>
+          )}
+          {hasDateFilter && (
+            <div className="ml-auto text-right">
+              <div className="text-xl font-serif font-semibold">{membersPaidInRange?.size ?? 0}</div>
+              <div className="text-xs text-gray-500">member{membersPaidInRange?.size === 1 ? '' : 's'} paid in this period</div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {view === 'table' ? (
+        <div className="bg-card rounded-xl border border-black/5 overflow-x-auto">
+          <table className="w-full text-sm min-w-[800px]">
+            <thead>
+              <tr className="text-left text-[10px] text-gray-400 tracking-wide border-b border-black/5">
+                <th className="p-4 font-normal">SEAT</th>
+                <th className="font-normal">ZONE</th>
+                <th className="font-normal">MEMBER</th>
+                <th className="font-normal">PHONE</th>
+                <th className="font-normal">PLAN</th>
+                <th className="font-normal">STATUS</th>
+                <th className="font-normal">LAST PAYMENT</th>
+              </tr>
+            </thead>
+            <tbody>
+              {visibleZones.flatMap((zone: any) =>
+                (zone.seats ?? [])
+                  .filter((s: any) => {
+                    if (!hasDateFilter) return true;
+                    if (!s.member) return false;
+                    return membersPaidInRange?.has(s.member.id);
+                  })
+                  .map((s: any) => {
+                    const lastPayment = s.member ? latestPaymentByMember.get(s.member.id) : null;
+                    return (
+                      <tr key={s.id} className="border-b border-black/5 last:border-0">
+                        <td className="p-4 font-medium">#{s.seatNumber}</td>
+                        <td className="text-gray-500">{zone.name}</td>
+                        <td>{s.member?.name ?? '—'}</td>
+                        <td className="text-gray-500">{s.member?.phone ?? '—'}</td>
+                        <td>{s.member ? formatPlan(s.member.plan) : '—'}</td>
+                        <td>
+                          <span
+                            className={`text-[10px] rounded-full px-2 py-0.5 ${
+                              s.status === 'FREE'
+                                ? 'bg-free/15 text-free'
+                                : s.status === 'EXPIRING_SOON'
+                                  ? 'bg-expiring/15 text-expiring'
+                                  : 'bg-occupied/15 text-occupied'
+                            }`}
+                          >
+                            {s.status === 'FREE' ? 'Free' : s.status === 'EXPIRING_SOON' ? 'Expiring Soon' : 'Occupied'}
+                          </span>
+                        </td>
+                        <td>
+                          {lastPayment ? (
+                            <>
+                              <span className="font-medium">₹{lastPayment.amount}</span>
+                              <span className="text-gray-400 ml-1.5">{formatDate(lastPayment.createdAt)}</span>
+                            </>
+                          ) : (
+                            <span className="text-gray-300">—</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  }),
+              )}
+              {visibleZones.every((z: any) => (z.seats ?? []).length === 0) && (
+                <tr>
+                  <td colSpan={7} className="p-8 text-center text-gray-400">
+                    No seats match.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      ) : (
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
           {visibleZones.map((zone: any) => (
@@ -191,6 +355,34 @@ export default function SeatingPage() {
                   </button>
                 )}
               </div>
+              {canAddZone && (
+                <div className="flex items-center gap-3 mb-3">
+                  {zone.imageUrl && (
+                    <img
+                      src={zone.imageUrl}
+                      alt={`${zone.name} photo`}
+                      className="w-14 h-14 object-cover rounded-lg border border-black/10 shrink-0"
+                    />
+                  )}
+                  <label className="text-[11px] text-accent font-medium cursor-pointer">
+                    {uploadingZoneImage === zone.id
+                      ? 'Uploading…'
+                      : zone.imageUrl
+                        ? 'Replace Photo'
+                        : '+ Add Photo of this Area'}
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      className="hidden"
+                      disabled={uploadingZoneImage === zone.id}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) uploadZoneImage(zone.id, file);
+                      }}
+                    />
+                  </label>
+                </div>
+              )}
               {addingSeatsToZone === zone.id && (
                 <div className="flex items-center gap-2 mb-3 bg-accent/5 border border-accent/10 rounded-lg p-2">
                   <span className="text-[11px] text-gray-500 shrink-0">Add</span>
@@ -400,6 +592,7 @@ export default function SeatingPage() {
           )}
         </div>
       </div>
+      )}
 
       {showAddZone && (
         <AddZoneModal onClose={() => setShowAddZone(false)} onSuccess={refetchZones} />

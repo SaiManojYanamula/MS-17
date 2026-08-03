@@ -65,6 +65,7 @@ export default function NewApplicationModal({
               >
                 <option value="MONTHLY">Monthly</option>
                 <option value="QUARTERLY">Quarterly</option>
+                <option value="YEARLY">Yearly</option>
                 <option value="DAILY_PASS">Daily Pass</option>
               </select>
             </div>

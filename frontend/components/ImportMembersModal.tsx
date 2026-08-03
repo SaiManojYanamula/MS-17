@@ -73,7 +73,7 @@ export default function ImportMembersModal({
               className="w-full border border-black/10 rounded-lg px-3 py-2 text-sm file:mr-3 file:border-0 file:bg-black/5 file:rounded file:px-2 file:py-1 file:text-xs"
             />
             <p className="text-[11px] text-gray-400 mt-1">
-              Columns needed: Name, Phone, Plan (Monthly/Quarterly/Daily Pass), Batch. Goal and Joined
+              Columns needed: Name, Phone, Plan (Monthly/Quarterly/Yearly/Daily Pass), Batch. Goal and Joined
               Date are optional. Each student gets a portal login (phone number, default password 1234)
               same as adding one manually — no Aadhar upload needed for bulk import.
             </p>

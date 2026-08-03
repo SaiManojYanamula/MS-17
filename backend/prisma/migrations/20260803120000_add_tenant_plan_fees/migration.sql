@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE `Tenant` ADD COLUMN `monthlyFee` INTEGER NULL, ADD COLUMN `quarterlyFee` INTEGER NULL, ADD COLUMN `dailyPassFee` INTEGER NULL;

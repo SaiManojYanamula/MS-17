@@ -42,6 +42,10 @@ export class TenantsController {
       notifyExpiry?: boolean;
       notifyPayments?: boolean;
       notifyWhatsapp?: boolean;
+      monthlyFee?: number | null;
+      quarterlyFee?: number | null;
+      yearlyFee?: number | null;
+      dailyPassFee?: number | null;
     },
   ) {
     return this.tenantsService.updateTenant(req.tenantId!, body);

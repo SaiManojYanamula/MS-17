@@ -65,6 +65,7 @@ export class ApplicationsService {
     const now = new Date();
     if (plan === 'MONTHLY') return addMonthsClamped(now, 1);
     if (plan === 'QUARTERLY') return addMonthsClamped(now, 3);
+    if (plan === 'YEARLY') return addMonthsClamped(now, 12);
     return new Date(now.setDate(now.getDate() + 1)); // DAILY_PASS
   }
 }

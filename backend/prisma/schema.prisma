@@ -39,6 +39,7 @@ enum SeatStatus {
 enum PlanType {
   MONTHLY
   QUARTERLY
+  YEARLY
   DAILY_PASS
 }
 
@@ -99,6 +100,13 @@ model Tenant {
   // exactly which optional modules each org gets, independent of plan.
   // Core modules (Members/Payments/Settings/Dashboard) are never gated.
   enabledFeatures String @default("EXPENSES,NOTICES,REQUESTS,SEATING,REPORTS,ATTENDANCE")
+  // Standard fee per plan — set by the owner in Settings. Powers the "Due"
+  // column on Payments (fee − amount paid). Null means "not configured yet",
+  // so Due shows as "—" instead of a misleading ₹0.
+  monthlyFee    Int?
+  quarterlyFee  Int?
+  yearlyFee     Int?
+  dailyPassFee  Int?
   createdAt      DateTime         @default(now())
   updatedAt DateTime         @updatedAt
 
@@ -188,6 +196,7 @@ model Zone {
   name      String // e.g. "Zone A - Window Row"
   startSeat Int
   endSeat   Int
+  imageUrl  String? // photo of this area — shown to students picking a seat here on the public booking page
 
   branch Branch @relation(fields: [branchId], references: [id])
   seats  Seat[]
@@ -337,6 +346,7 @@ model Request {
   message   String
   amount        Int? // set on RENEWAL requests — the student's self-reported payment amount, verified by staff on resolve
   screenshotUrl String? // proof-of-payment screenshot for a RENEWAL request
+  requestedSeatNumber Int? // set on SEAT_CHANGE requests — the seat the student wants to move to
   status    RequestStatus @default(OPEN)
   createdAt DateTime      @default(now())
 

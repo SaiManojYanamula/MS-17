@@ -33,6 +33,7 @@ export default function MembersPage() {
   const [showImport, setShowImport] = useState(false);
   const [editingMember, setEditingMember] = useState<any>(null);
   const [error, setError] = useState('');
+  const [view, setView] = useState<'grid' | 'table'>('grid');
   const highlightId = useSearchParams().get('highlight');
 
   const refetch = () => {
@@ -92,6 +93,20 @@ export default function MembersPage() {
         </div>
         <div className="flex items-center gap-3">
           <TopBar value={search} onChange={setSearch} />
+          <div className="flex items-center border border-black/10 rounded-lg overflow-hidden shrink-0 text-sm">
+            <button
+              onClick={() => setView('grid')}
+              className={`px-3 py-2 ${view === 'grid' ? 'bg-sidebar text-white' : 'bg-white text-gray-500'}`}
+            >
+              Grid
+            </button>
+            <button
+              onClick={() => setView('table')}
+              className={`px-3 py-2 ${view === 'table' ? 'bg-sidebar text-white' : 'bg-white text-gray-500'}`}
+            >
+              Table
+            </button>
+          </div>
           <button
             onClick={exportCsv}
             className="border border-black/10 text-sm px-4 py-2 rounded-lg shrink-0"
@@ -138,6 +153,89 @@ export default function MembersPage() {
 
       {error && <p className="text-xs text-expiring mb-3">{error}</p>}
 
+      {view === 'table' ? (
+        <div className="bg-card rounded-xl border border-black/5 overflow-x-auto">
+          <table className="w-full text-sm min-w-[800px]">
+            <thead>
+              <tr className="text-left text-[10px] text-gray-400 tracking-wide border-b border-black/5">
+                <th className="p-4 font-normal">NAME</th>
+                <th className="font-normal">PHONE</th>
+                <th className="font-normal">PLAN</th>
+                <th className="font-normal">BATCH</th>
+                <th className="font-normal">SEAT</th>
+                <th className="font-normal">EXPIRES</th>
+                <th className="font-normal">STATUS</th>
+                <th className="font-normal">PORTAL</th>
+                <th className="font-normal" />
+              </tr>
+            </thead>
+            <tbody>
+              {members.map((m: any) => (
+                <tr
+                  key={m.id}
+                  className={`border-b border-black/5 last:border-0 ${m.id === highlightId ? 'bg-accent/5' : ''}`}
+                >
+                  <td className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-accent to-accent/70 text-white flex items-center justify-center text-xs font-semibold shrink-0">
+                        {m.name.split(' ').map((p: string) => p[0]).join('')}
+                      </div>
+                      <div>
+                        <div className="font-medium">{m.name}</div>
+                        <div className="text-xs text-gray-400">{m.goalTag}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td>{m.phone || '—'}</td>
+                  <td>{formatPlan(m.plan)}</td>
+                  <td>{m.batch}</td>
+                  <td>#{seatNumberOf(m.seat)}</td>
+                  <td>{formatDate(m.expiresAt)}</td>
+                  <td>
+                    <StatusPill status={m.status} />
+                  </td>
+                  <td>
+                    {m.user ? (
+                      <span className="text-[10px] bg-free/15 text-free font-medium rounded-full px-2 py-0.5">
+                        Active
+                      </span>
+                    ) : (
+                      <span className="text-[10px] bg-black/5 text-gray-400 font-medium rounded-full px-2 py-0.5">
+                        {m.phone ? 'Pending' : 'No phone'}
+                      </span>
+                    )}
+                  </td>
+                  <td className="p-4">
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setEditingMember(m)}
+                        className="text-xs text-accent font-medium"
+                      >
+                        Edit
+                      </button>
+                      {canDelete && (
+                        <button
+                          onClick={() => deleteMember(m)}
+                          className="text-xs text-expiring font-medium"
+                        >
+                          Delete
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {members.length === 0 && (
+                <tr>
+                  <td colSpan={9} className="p-8 text-center text-gray-400">
+                    No members match.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      ) : (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {members.map((m: any) => (
           <div
@@ -215,6 +313,7 @@ export default function MembersPage() {
           <p className="text-sm text-gray-400 col-span-3 text-center py-8">No members match.</p>
         )}
       </div>
+      )}
 
       {showAdd && <AddMemberModal onClose={() => setShowAdd(false)} onSuccess={refetch} />}
       {showImport && <ImportMembersModal onClose={() => setShowImport(false)} onSuccess={refetch} />}

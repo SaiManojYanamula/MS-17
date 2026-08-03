@@ -151,6 +151,11 @@ export const api = {
     request('/seating/zones', { method: 'POST', body: JSON.stringify(data) }),
   addSeatsToZone: (zoneId: string, count: number) =>
     request(`/seating/zones/${zoneId}/seats`, { method: 'POST', body: JSON.stringify({ count }) }),
+  uploadZoneImage: (zoneId: string, image: File) => {
+    const formData = new FormData();
+    formData.append('image', image);
+    return request(`/seating/zones/${zoneId}/image`, { method: 'POST', body: formData });
+  },
 
   payments: (status?: string) => request(`/payments${status ? `?status=${status}` : ''}`),
   paymentsSummary: () => request('/payments/summary'),
@@ -197,6 +202,10 @@ export const api = {
     notifyExpiry?: boolean;
     notifyPayments?: boolean;
     notifyWhatsapp?: boolean;
+    monthlyFee?: number | null;
+    quarterlyFee?: number | null;
+    yearlyFee?: number | null;
+    dailyPassFee?: number | null;
   }) =>
     request('/tenants/me', { method: 'PATCH', body: JSON.stringify(data) }),
   uploadTenantCover: (cover: File) => {
@@ -281,7 +290,8 @@ export const api = {
 
   // Requests
   myRequests: () => request('/requests/me'),
-  createRequest: (data: { type: string; message: string }) =>
+  availableSeats: () => request('/requests/available-seats'),
+  createRequest: (data: { type: string; message: string; requestedSeatNumber?: number }) =>
     request('/requests', { method: 'POST', body: JSON.stringify(data) }),
   createRenewalRequest: (data: { message?: string; amount: number; screenshot?: File }) => {
     const form = new FormData();

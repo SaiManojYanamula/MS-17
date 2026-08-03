@@ -1,13 +1,40 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  Req,
+  UploadedFile,
+  UseInterceptors,
+} from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
+import { extname } from 'path';
 import { SeatingService } from './seating.service';
 import { TenantRequest } from '../common/middleware/tenant.middleware';
 import { Roles } from '../common/decorators/roles.decorator';
 import { RequireFeature } from '../common/decorators/require-feature.decorator';
+import { R2Service } from '../common/storage/r2.service';
+
+const zoneImageUpload = FileInterceptor('image', {
+  storage: memoryStorage(),
+  fileFilter: (_req, file, cb) => {
+    cb(null, /^image\/(jpeg|jpg|png|webp)$/.test(file.mimetype));
+  },
+  limits: { fileSize: 5 * 1024 * 1024 },
+});
 
 @Controller('seating')
 @RequireFeature('SEATING')
 export class SeatingController {
-  constructor(private seatingService: SeatingService) {}
+  constructor(
+    private seatingService: SeatingService,
+    private r2Service: R2Service,
+  ) {}
 
   @Get()
   @Roles('TENANT_OWNER', 'BRANCH_MANAGER', 'STAFF')
@@ -32,6 +59,19 @@ export class SeatingController {
     @Body('count') count: number,
   ) {
     return this.seatingService.addSeatsToZone(req.tenantId!, req.branchId!, zoneId, Number(count));
+  }
+
+  @Post('zones/:zoneId/image')
+  @Roles('TENANT_OWNER', 'BRANCH_MANAGER')
+  @UseInterceptors(zoneImageUpload)
+  async uploadZoneImage(
+    @Req() req: TenantRequest,
+    @Param('zoneId') zoneId: string,
+    @UploadedFile() image: Express.Multer.File,
+  ) {
+    const unique = `${Date.now()}-${Math.round(Math.random() * 1e9)}${extname(image.originalname)}`;
+    const imageUrl = await this.r2Service.upload(`zones/${unique}`, image.buffer, image.mimetype);
+    return this.seatingService.updateZoneImage(req.tenantId!, req.branchId!, zoneId, imageUrl);
   }
 
   @Get(':seatId')

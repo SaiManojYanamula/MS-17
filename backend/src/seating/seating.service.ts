@@ -76,6 +76,12 @@ export class SeatingService {
     return this.prisma.zone.findUnique({ where: { id: zoneId }, include: { seats: true } });
   }
 
+  async updateZoneImage(tenantId: string, branchId: string, zoneId: string, imageUrl: string) {
+    const zone = await this.prisma.zone.findFirst({ where: { id: zoneId, tenantId, branchId } });
+    if (!zone) throw new NotFoundException('Zone not found');
+    return this.prisma.zone.update({ where: { id: zoneId }, data: { imageUrl } });
+  }
+
   async getSeatMap(tenantId: string, branchId: string) {
     const zones = await this.prisma.zone.findMany({
       where: { tenantId, branchId },

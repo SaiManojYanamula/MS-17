@@ -142,6 +142,7 @@ export default function PaymentsPage() {
             <tr className="text-left text-[10px] text-gray-400 tracking-wide border-b border-black/5">
               <th className="p-4 font-normal">MEMBER</th>
               <th className="font-normal">AMOUNT</th>
+              <th className="font-normal">DUE</th>
               <th className="font-normal">METHOD</th>
               <th className="font-normal">DATE</th>
               <th className="font-normal">STATUS</th>
@@ -163,6 +164,17 @@ export default function PaymentsPage() {
                   </div>
                 </td>
                 <td>₹{t.amount}</td>
+                <td>
+                  {t.due != null ? (
+                    t.due > 0 ? (
+                      <span className="text-expiring font-medium">₹{t.due}</span>
+                    ) : (
+                      <span className="text-free">Fully Paid</span>
+                    )
+                  ) : (
+                    <span className="text-gray-300">—</span>
+                  )}
+                </td>
                 <td>
                   <span className="text-xs bg-black/5 rounded-full px-2 py-0.5">{t.method}</span>
                   {t.screenshotUrl && (

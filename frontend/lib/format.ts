@@ -13,6 +13,7 @@ export function formatDate(value?: string | null): string {
 const PLAN_LABELS: Record<string, string> = {
   MONTHLY: 'Monthly',
   QUARTERLY: 'Quarterly',
+  YEARLY: 'Yearly',
   DAILY_PASS: 'Daily Pass',
 };
 
@@ -35,6 +36,7 @@ export function memberNameOf(member: any): string {
 const PLAN_TOTAL_DAYS: Record<string, number> = {
   MONTHLY: 30,
   QUARTERLY: 90,
+  YEARLY: 365,
   DAILY_PASS: 1,
 };
 

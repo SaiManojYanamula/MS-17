@@ -45,6 +45,7 @@ export default function DashboardPage() {
   });
   const [newMembersDays, setNewMembersDays] = useState(7);
   const [showAddMember, setShowAddMember] = useState(false);
+  const [search, setSearch] = useState('');
 
   const refetch = () => {
     api.dashboardStats().then(setStats).catch(() => {});
@@ -64,6 +65,16 @@ export default function DashboardPage() {
 
   const firstName = user?.name?.split(' ')[0] ?? '';
 
+  const q = search.trim().toLowerCase();
+  const filteredPending = q
+    ? pending.filter((a: any) => (a.applicant ?? '').toLowerCase().includes(q))
+    : pending;
+  const filteredNewMembers = q
+    ? newMembers.members.filter(
+        (m: any) => (m.name ?? '').toLowerCase().includes(q) || (m.phone ?? '').includes(q),
+      )
+    : newMembers.members;
+
   return (
     <div>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
@@ -72,7 +83,7 @@ export default function DashboardPage() {
           <p className="text-sm text-gray-500">Room status: Open</p>
         </div>
         <div className="flex items-center gap-3">
-          <TopBar />
+          <TopBar placeholder="Search applicant or new member..." value={search} onChange={setSearch} />
           <button
             onClick={() => setShowAddMember(true)}
             className="bg-sidebar text-white text-sm px-4 py-2 rounded-lg shrink-0"
@@ -124,7 +135,7 @@ export default function DashboardPage() {
               </tr>
             </thead>
             <tbody>
-              {pending.map((a: any) => (
+              {filteredPending.map((a: any) => (
                 <tr key={a.id} className="border-t border-black/5">
                   <td className="py-2.5">
                     <div className="font-medium">{a.applicant}</div>
@@ -180,8 +191,10 @@ export default function DashboardPage() {
             </select>
           </div>
         </div>
-        {newMembers.members.length === 0 ? (
-          <p className="text-sm text-gray-400">No new members in this period.</p>
+        {filteredNewMembers.length === 0 ? (
+          <p className="text-sm text-gray-400">
+            {q ? `No new members match "${search}".` : 'No new members in this period.'}
+          </p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm min-w-[500px]">
@@ -195,7 +208,7 @@ export default function DashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {newMembers.members.map((m: any) => (
+                {filteredNewMembers.map((m: any) => (
                   <tr key={m.id} className="border-t border-black/5">
                     <td className="py-2 font-medium">{m.name}</td>
                     <td className="text-gray-500">{m.phone ?? '—'}</td>

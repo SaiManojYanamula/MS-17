@@ -5,6 +5,15 @@ import { useAuth } from '@/lib/auth';
 import { api } from '@/lib/api';
 import { formatDate } from '@/lib/format';
 
+// YYYY-MM-DD in local time — Date#toISOString() shifts to UTC first, which
+// can land on the wrong day for users east of UTC (e.g. India).
+function toDateInputValue(d: Date): string {
+  const yr = d.getFullYear();
+  const mo = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${yr}-${mo}-${day}`;
+}
+
 export default function NoticesPage() {
   const { hasRole } = useAuth();
   const canManage = hasRole('TENANT_OWNER', 'BRANCH_MANAGER', 'STAFF');
@@ -28,6 +37,10 @@ export default function NoticesPage() {
   const post = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    if ((startDate && !endDate) || (endDate && !startDate)) {
+      setError('Pick both a From and a To date — or leave both blank for a non-dated notice.');
+      return;
+    }
     setSubmitting(true);
     try {
       await api.postNotice({
@@ -103,6 +116,30 @@ export default function NoticesPage() {
             <label className="block text-xs text-gray-500 mb-1">
               Holiday/closure dates (optional — e.g. for a holiday notice)
             </label>
+            <div className="flex gap-2 mb-2">
+              <button
+                type="button"
+                onClick={() => {
+                  const today = toDateInputValue(new Date());
+                  setStartDate(today);
+                  setEndDate(today);
+                }}
+                className="text-xs border border-black/10 rounded-full px-3 py-1 hover:bg-black/5"
+              >
+                Today
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const tomorrow = toDateInputValue(new Date(Date.now() + 24 * 60 * 60 * 1000));
+                  setStartDate(tomorrow);
+                  setEndDate(tomorrow);
+                }}
+                className="text-xs border border-black/10 rounded-full px-3 py-1 hover:bg-black/5"
+              >
+                Tomorrow
+              </button>
+            </div>
             <div className="grid grid-cols-2 gap-2">
               <input
                 type="date"

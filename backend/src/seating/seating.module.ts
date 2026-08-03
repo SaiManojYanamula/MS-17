@@ -6,5 +6,6 @@ import { PrismaService } from '../prisma.service';
 @Module({
   controllers: [SeatingController],
   providers: [SeatingService, PrismaService],
+  exports: [SeatingService],
 })
 export class SeatingModule {}

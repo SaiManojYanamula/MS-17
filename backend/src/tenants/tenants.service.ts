@@ -24,6 +24,10 @@ export class TenantsService {
       notifyExpiry?: boolean;
       notifyPayments?: boolean;
       notifyWhatsapp?: boolean;
+      monthlyFee?: number | null;
+      quarterlyFee?: number | null;
+      yearlyFee?: number | null;
+      dailyPassFee?: number | null;
     },
   ) {
     // WhatsApp costs the platform money per message, so an owner can only

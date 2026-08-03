@@ -95,11 +95,18 @@ export class PublicController {
     const branch = await this.prisma.branch.findFirst({ where: { id: branchId, tenantId: tenant.id } });
     if (!branch) throw new NotFoundException('Branch not found');
 
-    return this.prisma.seat.findMany({
-      where: { branchId, tenantId: tenant.id, status: 'FREE' },
-      select: { id: true, seatNumber: true, zoneId: true },
-      orderBy: { seatNumber: 'asc' },
-    });
+    const [seats, zones] = await Promise.all([
+      this.prisma.seat.findMany({
+        where: { branchId, tenantId: tenant.id, status: 'FREE' },
+        select: { id: true, seatNumber: true, zoneId: true },
+        orderBy: { seatNumber: 'asc' },
+      }),
+      this.prisma.zone.findMany({
+        where: { branchId, tenantId: tenant.id },
+        select: { id: true, name: true, imageUrl: true },
+      }),
+    ]);
+    return { seats, zones };
   }
 
   // Self-service booking: student picks a free seat and pays right there —

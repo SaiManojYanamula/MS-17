@@ -13,6 +13,9 @@ const PLAN_ALIASES: Record<string, string> = {
   MONTH: 'MONTHLY',
   QUARTERLY: 'QUARTERLY',
   QUARTER: 'QUARTERLY',
+  YEARLY: 'YEARLY',
+  YEAR: 'YEARLY',
+  ANNUAL: 'YEARLY',
   DAILY: 'DAILY_PASS',
   DAILYPASS: 'DAILY_PASS',
   DAILY_PASS: 'DAILY_PASS',
@@ -110,6 +113,7 @@ export class MembersService {
   private computeExpiry(plan: string, from: Date): Date {
     if (plan === 'MONTHLY') return addMonthsClamped(from, 1);
     if (plan === 'QUARTERLY') return addMonthsClamped(from, 3);
+    if (plan === 'YEARLY') return addMonthsClamped(from, 12);
     const d = new Date(from);
     return new Date(d.setDate(d.getDate() + 1)); // DAILY_PASS
   }
@@ -124,6 +128,21 @@ export class MembersService {
 
   async create(tenantId: string, branchId: string, data: any) {
     assertValidPhone(data.phone);
+    // Same phone re-added while their existing membership is still active
+    // (e.g. a day pass holder immediately "added" again as Monthly) would
+    // silently create a second Member row whose portal login then fails to
+    // create at all (User.email=phone is globally unique) — block it up
+    // front instead. A genuinely expired member is fine to re-register.
+    if (data.phone) {
+      const existing = await this.prisma.member.findFirst({
+        where: { tenantId, phone: data.phone, expiresAt: { gt: new Date() } },
+      });
+      if (existing) {
+        throw new BadRequestException(
+          `This phone number already belongs to an active member (${existing.name}) — edit or renew that member instead of adding a new one.`,
+        );
+      }
+    }
     const displayId = await this.generateDisplayId(tenantId);
     const joinedAt = data.joinedAt ? new Date(data.joinedAt) : new Date();
     const expiresAt = this.computeExpiry(data.plan, joinedAt);

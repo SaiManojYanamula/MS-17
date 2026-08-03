@@ -3,9 +3,10 @@ import { RequestsController } from './requests.controller';
 import { RequestsService } from './requests.service';
 import { PrismaService } from '../prisma.service';
 import { MembersModule } from '../members/members.module';
+import { SeatingModule } from '../seating/seating.module';
 
 @Module({
-  imports: [MembersModule],
+  imports: [MembersModule, SeatingModule],
   controllers: [RequestsController],
   providers: [RequestsService, PrismaService],
 })

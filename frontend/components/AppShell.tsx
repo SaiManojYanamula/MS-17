@@ -16,7 +16,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const isStudent = user?.role === 'STUDENT';
   const isSuperAdmin = user?.role === 'SUPER_ADMIN';
   const homeRoute = isStudent ? '/portal' : isSuperAdmin ? '/super-admin' : '/dashboard';
-  const isPublicRoute = pathname === '/login' || pathname.startsWith('/apply');
+  const isApplyRoute = pathname.startsWith('/apply');
+  const isPublicRoute = pathname === '/login' || isApplyRoute;
   const inSuperAdminArea = pathname === '/super-admin' || pathname.startsWith('/super-admin/');
   const inPortalArea = pathname === '/portal' || pathname.startsWith('/portal/');
   // Notices and Requests are role-branched pages shared by staff and students —
@@ -26,6 +27,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (loading) return;
+    // The QR-code booking page must render as-is no matter who's logged in
+    // on this browser/phone — e.g. an admin scanning their own tenant's QR
+    // to test it should see the student form, not get bounced to their own
+    // dashboard. /login still redirects a logged-in visitor away below.
+    if (isApplyRoute) return;
     if (!user && !isPublicRoute) {
       router.replace('/login');
     } else if (user && pathname === '/login') {
