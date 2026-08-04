@@ -62,13 +62,14 @@ export class RequestsController {
     return this.requestsService.create(req.tenantId!, req.branchId!, req.memberId, body);
   }
 
-  // Renewal-with-proof: same request type as create() but also carries a
-  // payment amount + screenshot, so staff can verify and renew in one step.
+  // "Update Membership" — renewal-with-proof, optionally bundled with a
+  // seat-change in the same submission (both apply on resolve, see
+  // RequestsService.resolve).
   @Post('renewal')
   @UseInterceptors(screenshotUpload)
   async createRenewal(
     @Req() req: TenantRequest,
-    @Body() body: { message?: string; amount: string },
+    @Body() body: { message?: string; amount: string; requestedSeatNumber?: string },
     @UploadedFile() file?: Express.Multer.File,
   ) {
     if (!req.memberId) {
@@ -84,6 +85,7 @@ export class RequestsController {
       message: body.message || 'Membership renewal payment submitted',
       amount: Number(body.amount),
       screenshotUrl,
+      requestedSeatNumber: body.requestedSeatNumber ? Number(body.requestedSeatNumber) : undefined,
     });
   }
 

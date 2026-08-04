@@ -5,7 +5,7 @@ import TopBar from '@/components/TopBar';
 import AddExpenseModal from '@/components/AddExpenseModal';
 import EditExpenseModal from '@/components/EditExpenseModal';
 import { api } from '@/lib/api';
-import { formatDate } from '@/lib/format';
+import { formatDate, istDayStart, istDayEnd } from '@/lib/format';
 import { downloadCsv } from '@/lib/csv';
 
 const categoryColors: Record<string, string> = {
@@ -26,6 +26,8 @@ export default function ExpensesPage() {
   const [error, setError] = useState('');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
+  const [appliedFromDate, setAppliedFromDate] = useState('');
+  const [appliedToDate, setAppliedToDate] = useState('');
 
   const refetch = () => {
     api.expenses().then(setExpenses).catch(() => setError('Could not load expenses'));
@@ -36,15 +38,26 @@ export default function ExpensesPage() {
     refetch();
   }, []);
 
-  // From/To are inclusive on both ends — toDate's end-of-day so that day's own expenses count.
+  const applyDateFilter = () => {
+    setAppliedFromDate(fromDate);
+    setAppliedToDate(toDate);
+  };
+  const clearDateFilter = () => {
+    setFromDate('');
+    setToDate('');
+    setAppliedFromDate('');
+    setAppliedToDate('');
+  };
+
+  // From/To are inclusive on both ends, compared as IST calendar days.
   const filteredExpenses = expenses.filter((e: any) => {
     const at = new Date(e.createdAt).getTime();
-    if (fromDate && at < new Date(fromDate).getTime()) return false;
-    if (toDate && at > new Date(toDate).getTime() + 24 * 60 * 60 * 1000 - 1) return false;
+    if (appliedFromDate && at < istDayStart(appliedFromDate)) return false;
+    if (appliedToDate && at > istDayEnd(appliedToDate)) return false;
     return true;
   });
   const periodTotal = filteredExpenses.reduce((sum: number, e: any) => sum + e.amount, 0);
-  const hasDateFilter = !!(fromDate || toDate);
+  const hasDateFilter = !!(appliedFromDate || appliedToDate);
 
   const exportCsv = () => {
     downloadCsv(
@@ -117,14 +130,15 @@ export default function ExpensesPage() {
             className="border border-black/10 rounded-lg px-3 py-1.5 text-sm"
           />
         </div>
+        <button
+          onClick={applyDateFilter}
+          disabled={!fromDate && !toDate}
+          className="bg-sidebar text-white text-xs px-3 py-1.5 rounded-lg disabled:opacity-40"
+        >
+          Apply
+        </button>
         {hasDateFilter && (
-          <button
-            onClick={() => {
-              setFromDate('');
-              setToDate('');
-            }}
-            className="text-xs text-gray-400 underline"
-          >
+          <button onClick={clearDateFilter} className="text-xs text-gray-400 underline">
             Clear
           </button>
         )}

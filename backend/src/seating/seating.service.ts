@@ -23,6 +23,11 @@ export class SeatingService {
       throw new BadRequestException(`Seat number ${overlap.seatNumber} is already used in this branch`);
     }
 
+    const nameTaken = await this.prisma.zone.findFirst({ where: { branchId, name } });
+    if (nameTaken) {
+      throw new BadRequestException(`A zone named "${name}" already exists in this branch`);
+    }
+
     const zone = await this.prisma.zone.create({
       data: { tenantId, branchId, name, startSeat, endSeat },
     });
@@ -76,7 +81,7 @@ export class SeatingService {
     return this.prisma.zone.findUnique({ where: { id: zoneId }, include: { seats: true } });
   }
 
-  async updateZoneImage(tenantId: string, branchId: string, zoneId: string, imageUrl: string) {
+  async updateZoneImage(tenantId: string, branchId: string, zoneId: string, imageUrl: string | null) {
     const zone = await this.prisma.zone.findFirst({ where: { id: zoneId, tenantId, branchId } });
     if (!zone) throw new NotFoundException('Zone not found');
     return this.prisma.zone.update({ where: { id: zoneId }, data: { imageUrl } });

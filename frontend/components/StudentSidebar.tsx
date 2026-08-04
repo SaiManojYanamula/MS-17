@@ -12,12 +12,14 @@ import {
   CalendarIcon,
   BellIcon,
   RequestIcon,
+  PlansIcon,
   LogoutIcon,
 } from './icons';
 
 const links = [
   { href: '/portal', label: 'Dashboard', icon: DashboardIcon },
   { href: '/portal/membership', label: 'My Membership', icon: IdCardIcon },
+  { href: '/portal/update-membership', label: 'Update Membership', icon: PlansIcon, feature: 'REQUESTS' },
   { href: '/portal/payments', label: 'Payments', icon: PaymentsIcon },
   { href: '/portal/attendance', label: 'Attendance', icon: CalendarIcon, feature: 'ATTENDANCE' },
   { href: '/portal/notices', label: 'Notices', icon: BellIcon, badgeKey: 'notices', feature: 'NOTICES' },

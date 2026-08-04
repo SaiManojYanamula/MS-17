@@ -46,14 +46,27 @@ export default function DashboardPage() {
   const [newMembersDays, setNewMembersDays] = useState(7);
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
+  const [appliedFromDate, setAppliedFromDate] = useState('');
+  const [appliedToDate, setAppliedToDate] = useState('');
   const [showAddMember, setShowAddMember] = useState(false);
   const [search, setSearch] = useState('');
 
-  const hasDateRange = !!(fromDate && toDate);
+  const hasDateRange = !!(appliedFromDate && appliedToDate);
+
+  const applyDateRange = () => {
+    setAppliedFromDate(fromDate);
+    setAppliedToDate(toDate);
+  };
+  const clearDateRange = () => {
+    setFromDate('');
+    setToDate('');
+    setAppliedFromDate('');
+    setAppliedToDate('');
+  };
 
   const refetchNewMembers = () => {
     if (hasDateRange) {
-      api.membersJoinedInRange(fromDate, toDate).then(setNewMembers).catch(() => {});
+      api.membersJoinedInRange(appliedFromDate, appliedToDate).then(setNewMembers).catch(() => {});
     } else {
       api.newMembersThisWeek(newMembersDays).then(setNewMembers).catch(() => {});
     }
@@ -73,7 +86,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     refetchNewMembers();
-  }, [newMembersDays, fromDate, toDate]);
+  }, [newMembersDays, appliedFromDate, appliedToDate]);
 
   const firstName = user?.name?.split(' ')[0] ?? '';
 
@@ -217,14 +230,15 @@ export default function DashboardPage() {
               min={fromDate || undefined}
               className="border border-black/10 rounded-lg px-2 py-1 text-xs"
             />
+            <button
+              onClick={applyDateRange}
+              disabled={!fromDate || !toDate}
+              className="bg-sidebar text-white text-xs px-2.5 py-1 rounded-lg disabled:opacity-40"
+            >
+              Apply
+            </button>
             {hasDateRange && (
-              <button
-                onClick={() => {
-                  setFromDate('');
-                  setToDate('');
-                }}
-                className="text-xs text-gray-400 underline"
-              >
+              <button onClick={clearDateRange} className="text-xs text-gray-400 underline">
                 Clear
               </button>
             )}

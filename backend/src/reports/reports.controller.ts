@@ -3,6 +3,7 @@ import { ReportsService } from './reports.service';
 import { TenantRequest } from '../common/middleware/tenant.middleware';
 import { Roles } from '../common/decorators/roles.decorator';
 import { RequireFeature } from '../common/decorators/require-feature.decorator';
+import { istDayStart, istDayEnd } from '../common/date-utils';
 
 @Controller('reports')
 @Roles('TENANT_OWNER', 'BRANCH_MANAGER', 'STAFF')
@@ -57,8 +58,8 @@ export class ReportsController {
     return this.reportsService.membersJoinedInRange(
       req.tenantId!,
       req.branchId!,
-      new Date(from),
-      new Date(to),
+      istDayStart(from),
+      istDayEnd(to),
     );
   }
 }

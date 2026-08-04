@@ -74,6 +74,12 @@ export class SeatingController {
     return this.seatingService.updateZoneImage(req.tenantId!, req.branchId!, zoneId, imageUrl);
   }
 
+  @Delete('zones/:zoneId/image')
+  @Roles('TENANT_OWNER', 'BRANCH_MANAGER')
+  deleteZoneImage(@Req() req: TenantRequest, @Param('zoneId') zoneId: string) {
+    return this.seatingService.updateZoneImage(req.tenantId!, req.branchId!, zoneId, null);
+  }
+
   @Get(':seatId')
   @Roles('TENANT_OWNER', 'BRANCH_MANAGER', 'STAFF')
   getSeatDetail(@Req() req: TenantRequest, @Param('seatId') seatId: string) {

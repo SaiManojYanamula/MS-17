@@ -98,10 +98,9 @@ export class ReportsService {
   // Reports page — explicit from/to date range (unlike newMembersThisWeek's
   // rolling N-day window), with full member detail for the table + CSV export.
   async membersJoinedInRange(tenantId: string, branchId: string, from: Date, to: Date) {
-    // Inclusive of the whole `to` day.
-    const toEnd = new Date(to.getFullYear(), to.getMonth(), to.getDate(), 23, 59, 59, 999);
+    // Caller passes IST day-boundaries already (see istDayStart/istDayEnd).
     const members = await this.prisma.member.findMany({
-      where: { tenantId, branchId, joinedAt: { gte: from, lte: toEnd } },
+      where: { tenantId, branchId, joinedAt: { gte: from, lte: to } },
       select: {
         id: true,
         displayId: true,

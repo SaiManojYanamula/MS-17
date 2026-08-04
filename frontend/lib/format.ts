@@ -2,6 +2,18 @@
 // API returns raw Prisma values (ISO dates, enum strings, relation objects).
 // These helpers format the real shape without touching mock strings.
 
+// A plain "YYYY-MM-DD" input parses as UTC midnight per the JS spec, which
+// silently shifts date-range filters by 5.5 hours (IST) — records made
+// before 5:30am land on the wrong side of the boundary. Explicit +05:30
+// keeps this correct even if the browser itself isn't set to IST.
+export function istDayStart(dateStr: string): number {
+  return new Date(`${dateStr}T00:00:00+05:30`).getTime();
+}
+
+export function istDayEnd(dateStr: string): number {
+  return new Date(`${dateStr}T23:59:59.999+05:30`).getTime();
+}
+
 export function formatDate(value?: string | null): string {
   if (!value) return '—';
   if (!/^\d{4}-\d{2}-\d{2}/.test(value)) return value; // already a mock display string

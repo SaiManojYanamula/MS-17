@@ -158,6 +158,7 @@ export const api = {
     formData.append('image', image);
     return request(`/seating/zones/${zoneId}/image`, { method: 'POST', body: formData });
   },
+  deleteZoneImage: (zoneId: string) => request(`/seating/zones/${zoneId}/image`, { method: 'DELETE' }),
 
   payments: (status?: string) => request(`/payments${status ? `?status=${status}` : ''}`),
   paymentsSummary: () => request('/payments/summary'),
@@ -295,11 +296,17 @@ export const api = {
   availableSeats: () => request('/requests/available-seats'),
   createRequest: (data: { type: string; message: string; requestedSeatNumber?: number }) =>
     request('/requests', { method: 'POST', body: JSON.stringify(data) }),
-  createRenewalRequest: (data: { message?: string; amount: number; screenshot?: File }) => {
+  createRenewalRequest: (data: {
+    message?: string;
+    amount: number;
+    screenshot?: File;
+    requestedSeatNumber?: number;
+  }) => {
     const form = new FormData();
     if (data.message) form.append('message', data.message);
     form.append('amount', String(data.amount));
     if (data.screenshot) form.append('screenshot', data.screenshot);
+    if (data.requestedSeatNumber) form.append('requestedSeatNumber', String(data.requestedSeatNumber));
     return request('/requests/renewal', { method: 'POST', body: form });
   },
   allRequests: () => request('/requests'),

@@ -66,11 +66,12 @@ export class RequestsService {
     const request = await this.prisma.request.findFirst({ where: { id, tenantId }, include: { member: true } });
     if (!request) throw new NotFoundException('Request not found');
 
-    // A RENEWAL request with a claimed amount is a self-reported payment —
-    // resolving it is staff confirming the money actually came in, so it
-    // extends the membership and books the payment in one action rather
-    // than leaving staff to separately renew + record it.
-    if (request.type === 'RENEWAL' && request.amount) {
+    // A request with a claimed amount is a self-reported payment — resolving
+    // it is staff confirming the money actually came in, so it extends the
+    // membership and books the payment in one action. Checked on `amount`
+    // rather than `type` so a combined "Update Membership" submission
+    // (renewal + optional seat change together) does both in one resolve.
+    if (request.amount) {
       const newExpiry = this.membersService.computeRenewalExpiry(request.member.plan, request.member.expiresAt);
       await this.membersService.update(tenantId, request.memberId, { expiresAt: newExpiry });
       await this.prisma.payment.create({
@@ -93,7 +94,7 @@ export class RequestsService {
     // actioned) but staff need to pick a different seat manually — silently
     // failing the whole resolve over a stale seat pick would be worse.
     let seatChangeNote: string | undefined;
-    if (request.type === 'SEAT_CHANGE' && request.requestedSeatNumber != null) {
+    if (request.requestedSeatNumber != null) {
       const seat = await this.prisma.seat.findFirst({
         where: { tenantId, branchId: request.branchId, seatNumber: request.requestedSeatNumber },
       });

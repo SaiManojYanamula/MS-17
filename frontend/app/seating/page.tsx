@@ -6,7 +6,7 @@ import TopBar from '@/components/TopBar';
 import AddZoneModal from '@/components/AddZoneModal';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import { formatDate, formatPlan, memberNameOf } from '@/lib/format';
+import { formatDate, formatPlan, memberNameOf, istDayStart, istDayEnd } from '@/lib/format';
 
 export default function SeatingPage() {
   const { hasRole } = useAuth();
@@ -32,6 +32,8 @@ export default function SeatingPage() {
   const [payments, setPayments] = useState<any[]>([]);
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
+  const [appliedFromDate, setAppliedFromDate] = useState('');
+  const [appliedToDate, setAppliedToDate] = useState('');
 
   const uploadZoneImage = async (zoneId: string, file: File) => {
     setError('');
@@ -41,6 +43,19 @@ export default function SeatingPage() {
       refetchZones();
     } catch (err: any) {
       setError(err.message || 'Could not upload photo');
+    } finally {
+      setUploadingZoneImage(null);
+    }
+  };
+
+  const deleteZoneImage = async (zoneId: string) => {
+    setError('');
+    setUploadingZoneImage(zoneId);
+    try {
+      await api.deleteZoneImage(zoneId);
+      refetchZones();
+    } catch (err: any) {
+      setError(err.message || 'Could not remove photo');
     } finally {
       setUploadingZoneImage(null);
     }
@@ -66,16 +81,23 @@ export default function SeatingPage() {
     }
   }
 
-  const hasDateFilter = !!(fromDate || toDate);
-  const paidInRange = (pay: any) => {
-    const at = new Date(pay.createdAt).getTime();
-    if (fromDate && at < new Date(fromDate).getTime()) return false;
-    if (toDate && at > new Date(toDate).getTime() + 24 * 60 * 60 * 1000 - 1) return false;
+  const hasDateFilter = !!(appliedFromDate || appliedToDate);
+  const expiresInRange = (expiresAt: string) => {
+    const at = new Date(expiresAt).getTime();
+    if (appliedFromDate && at < istDayStart(appliedFromDate)) return false;
+    if (appliedToDate && at > istDayEnd(appliedToDate)) return false;
     return true;
   };
-  const membersPaidInRange = hasDateFilter
-    ? new Set(payments.filter((p) => p.status === 'PAID' && paidInRange(p)).map((p) => p.memberId))
-    : null;
+  const applyDateFilter = () => {
+    setAppliedFromDate(fromDate);
+    setAppliedToDate(toDate);
+  };
+  const clearDateFilter = () => {
+    setFromDate('');
+    setToDate('');
+    setAppliedFromDate('');
+    setAppliedToDate('');
+  };
 
   useEffect(() => {
     setEditing(false);
@@ -232,7 +254,7 @@ export default function SeatingPage() {
       {view === 'table' && (
         <div className="bg-card rounded-xl p-4 border border-black/5 mb-4 flex flex-wrap items-end gap-3">
           <div>
-            <label className="block text-xs text-gray-500 mb-1">Payments From</label>
+            <label className="block text-xs text-gray-500 mb-1">Expiring From</label>
             <input
               type="date"
               value={fromDate}
@@ -249,21 +271,24 @@ export default function SeatingPage() {
               className="border border-black/10 rounded-lg px-3 py-1.5 text-sm"
             />
           </div>
+          <button
+            onClick={applyDateFilter}
+            disabled={!fromDate && !toDate}
+            className="bg-sidebar text-white text-xs px-3 py-1.5 rounded-lg disabled:opacity-40"
+          >
+            Apply
+          </button>
           {hasDateFilter && (
-            <button
-              onClick={() => {
-                setFromDate('');
-                setToDate('');
-              }}
-              className="text-xs text-gray-400 underline"
-            >
+            <button onClick={clearDateFilter} className="text-xs text-gray-400 underline">
               Clear
             </button>
           )}
           {hasDateFilter && (
             <div className="ml-auto text-right">
-              <div className="text-xl font-serif font-semibold">{membersPaidInRange?.size ?? 0}</div>
-              <div className="text-xs text-gray-500">member{membersPaidInRange?.size === 1 ? '' : 's'} paid in this period</div>
+              <div className="text-xl font-serif font-semibold">
+                {allSeats.filter((s: any) => s.member && expiresInRange(s.member.expiresAt)).length}
+              </div>
+              <div className="text-xs text-gray-500">members expiring in this period</div>
             </div>
           )}
         </div>
@@ -280,6 +305,7 @@ export default function SeatingPage() {
                 <th className="font-normal">PHONE</th>
                 <th className="font-normal">PLAN</th>
                 <th className="font-normal">STATUS</th>
+                <th className="font-normal">EXPIRES</th>
                 <th className="font-normal">LAST PAYMENT</th>
               </tr>
             </thead>
@@ -289,7 +315,7 @@ export default function SeatingPage() {
                   .filter((s: any) => {
                     if (!hasDateFilter) return true;
                     if (!s.member) return false;
-                    return membersPaidInRange?.has(s.member.id);
+                    return expiresInRange(s.member.expiresAt);
                   })
                   .map((s: any) => {
                     const lastPayment = s.member ? latestPaymentByMember.get(s.member.id) : null;
@@ -313,6 +339,7 @@ export default function SeatingPage() {
                             {s.status === 'FREE' ? 'Free' : s.status === 'EXPIRING_SOON' ? 'Expiring Soon' : 'Occupied'}
                           </span>
                         </td>
+                        <td className="text-gray-500">{s.member ? formatDate(s.member.expiresAt) : '—'}</td>
                         <td>
                           {lastPayment ? (
                             <>
@@ -329,7 +356,7 @@ export default function SeatingPage() {
               )}
               {visibleZones.every((z: any) => (z.seats ?? []).length === 0) && (
                 <tr>
-                  <td colSpan={7} className="p-8 text-center text-gray-400">
+                  <td colSpan={8} className="p-8 text-center text-gray-400">
                     No seats match.
                   </td>
                 </tr>
@@ -381,6 +408,16 @@ export default function SeatingPage() {
                       }}
                     />
                   </label>
+                  {zone.imageUrl && (
+                    <button
+                      type="button"
+                      onClick={() => deleteZoneImage(zone.id)}
+                      disabled={uploadingZoneImage === zone.id}
+                      className="text-[11px] text-expiring font-medium disabled:opacity-60"
+                    >
+                      Delete Photo
+                    </button>
+                  )}
                 </div>
               )}
               {addingSeatsToZone === zone.id && (
