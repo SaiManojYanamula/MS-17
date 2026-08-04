@@ -264,7 +264,7 @@ export default function DashboardPage() {
 
       <div className="bg-card rounded-xl p-5 border border-black/5">
         <div className="flex items-center justify-between mb-1">
-          <h2 className="font-serif font-semibold">Revenue — Last 6 Months</h2>
+          <h2 className="font-serif font-semibold">Revenue Last 6 Months</h2>
         </div>
         <div className="text-xl font-serif font-semibold mb-3">
           ₹{stats.revenueThisMonth.toLocaleString('en-IN')}
