@@ -44,15 +44,27 @@ export default function DashboardPage() {
     members: [],
   });
   const [newMembersDays, setNewMembersDays] = useState(7);
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
   const [showAddMember, setShowAddMember] = useState(false);
   const [search, setSearch] = useState('');
+
+  const hasDateRange = !!(fromDate && toDate);
+
+  const refetchNewMembers = () => {
+    if (hasDateRange) {
+      api.membersJoinedInRange(fromDate, toDate).then(setNewMembers).catch(() => {});
+    } else {
+      api.newMembersThisWeek(newMembersDays).then(setNewMembers).catch(() => {});
+    }
+  };
 
   const refetch = () => {
     api.dashboardStats().then(setStats).catch(() => {});
     api.applications('PENDING').then(setPending).catch(() => {});
     api.recentActivity(5).then(setActivity).catch(() => {});
     api.revenueTrend(6).then(setRevenue).catch(() => {});
-    api.newMembersThisWeek(newMembersDays).then(setNewMembers).catch(() => {});
+    refetchNewMembers();
   };
 
   useEffect(() => {
@@ -60,8 +72,8 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
-    api.newMembersThisWeek(newMembersDays).then(setNewMembers).catch(() => {});
-  }, [newMembersDays]);
+    refetchNewMembers();
+  }, [newMembersDays, fromDate, toDate]);
 
   const firstName = user?.name?.split(' ')[0] ?? '';
 
@@ -178,17 +190,44 @@ export default function DashboardPage() {
       <div className="bg-card rounded-xl p-5 border border-black/5 mb-6">
         <div className="flex items-center justify-between mb-3">
           <h2 className="font-serif font-semibold">New Members</h2>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2">
             <span className="text-xs text-gray-400">{newMembers.count} joined</span>
             <select
               value={newMembersDays}
               onChange={(e) => setNewMembersDays(Number(e.target.value))}
-              className="border border-black/10 rounded-lg px-2 py-1 text-xs"
+              disabled={hasDateRange}
+              className="border border-black/10 rounded-lg px-2 py-1 text-xs disabled:opacity-40"
             >
               <option value={7}>Last 7 days</option>
               <option value={30}>Last 30 days</option>
               <option value={90}>Last 90 days</option>
             </select>
+            <span className="text-xs text-gray-300">or</span>
+            <input
+              type="date"
+              value={fromDate}
+              onChange={(e) => setFromDate(e.target.value)}
+              className="border border-black/10 rounded-lg px-2 py-1 text-xs"
+            />
+            <span className="text-xs text-gray-400">to</span>
+            <input
+              type="date"
+              value={toDate}
+              onChange={(e) => setToDate(e.target.value)}
+              min={fromDate || undefined}
+              className="border border-black/10 rounded-lg px-2 py-1 text-xs"
+            />
+            {hasDateRange && (
+              <button
+                onClick={() => {
+                  setFromDate('');
+                  setToDate('');
+                }}
+                className="text-xs text-gray-400 underline"
+              >
+                Clear
+              </button>
+            )}
           </div>
         </div>
         {filteredNewMembers.length === 0 ? (
