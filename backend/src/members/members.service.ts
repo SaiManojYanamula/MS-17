@@ -178,13 +178,22 @@ export class MembersService {
 
   // e.g. "AKR-2214" — first 3 letters of the tenant slug + a running count of
   // members in that tenant. Shown to the student as their Student ID.
+  // Based on the highest displayId actually in use, not a row count —
+  // count() drifts the moment any member is ever deleted (count goes down,
+  // but the higher-numbered displayId is still taken), which silently
+  // regenerates a displayId that collides with an existing one and trips
+  // the unique constraint on every retry (seen in production).
   private async generateDisplayId(tenantId: string) {
-    const [tenant, count] = await Promise.all([
-      this.prisma.tenant.findUnique({ where: { id: tenantId }, select: { slug: true } }),
-      this.prisma.member.count({ where: { tenantId } }),
-    ]);
+    const tenant = await this.prisma.tenant.findUnique({ where: { id: tenantId }, select: { slug: true } });
     const prefix = (tenant?.slug ?? 'MEM').replace(/[^a-zA-Z]/g, '').slice(0, 3).toUpperCase() || 'MEM';
-    return `${prefix}-${String(count + 1).padStart(4, '0')}`;
+
+    const last = await this.prisma.member.findFirst({
+      where: { tenantId, displayId: { startsWith: `${prefix}-` } },
+      orderBy: { displayId: 'desc' },
+      select: { displayId: true },
+    });
+    const lastNum = last?.displayId ? parseInt(last.displayId.split('-')[1], 10) || 0 : 0;
+    return `${prefix}-${String(lastNum + 1).padStart(4, '0')}`;
   }
 
   async update(tenantId: string, id: string, data: any) {
