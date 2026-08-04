@@ -129,7 +129,7 @@ export default function ReportsPage() {
         </div>
         <TopBar />
       </div>
-{/* 
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
         <div className="bg-card rounded-xl p-5 border border-black/5">
           <h2 className="font-serif font-semibold mb-4">Occupancy Trend — Last 8 Weeks</h2>
@@ -190,7 +190,7 @@ export default function ReportsPage() {
             </div>
           </div>
         </div>
-      </div> */}
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="bg-card rounded-xl p-5 border border-black/5">
@@ -218,7 +218,7 @@ export default function ReportsPage() {
           </div>
         </div>
 
-        {/* <div className="bg-card rounded-xl p-5 border border-black/5">
+        <div className="bg-card rounded-xl p-5 border border-black/5">
           <h2 className="font-serif font-semibold mb-4">Key Numbers</h2>
           <div className="space-y-3 text-sm">
             <div className="flex justify-between border-b border-black/5 pb-2">
@@ -242,7 +242,7 @@ export default function ReportsPage() {
               <span className="font-medium">{keyNumbers.mostCommonGoal}</span>
             </div>
           </div>
-        </div> */}
+        </div>
       </div>
 
       <div className="bg-card rounded-xl p-5 border border-black/5 mt-4">
