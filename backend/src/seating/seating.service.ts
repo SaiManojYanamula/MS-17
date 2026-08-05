@@ -1,6 +1,12 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 
+// No real study hall has anywhere near this many physical seats — this
+// exists purely to catch a typo in the End Seat field (e.g. an extra digit
+// producing 100,000+ seats) before it creates rows that make the Seating
+// page unusable to even load.
+const MAX_SEATS_PER_ZONE = 1000;
+
 @Injectable()
 export class SeatingService {
   constructor(private prisma: PrismaService) {}
@@ -14,6 +20,11 @@ export class SeatingService {
     const { name, startSeat, endSeat } = data;
     if (!Number.isInteger(startSeat) || !Number.isInteger(endSeat) || startSeat > endSeat) {
       throw new BadRequestException('Start seat must be less than or equal to end seat');
+    }
+    if (endSeat - startSeat + 1 > MAX_SEATS_PER_ZONE) {
+      throw new BadRequestException(
+        `A zone can have at most ${MAX_SEATS_PER_ZONE} seats — check the End Seat number for a typo`,
+      );
     }
 
     const overlap = await this.prisma.seat.findFirst({
@@ -53,6 +64,11 @@ export class SeatingService {
   async addSeatsToZone(tenantId: string, branchId: string, zoneId: string, count: number) {
     if (!Number.isInteger(count) || count < 1) {
       throw new BadRequestException('Enter a valid number of seats to add');
+    }
+    if (count > MAX_SEATS_PER_ZONE) {
+      throw new BadRequestException(
+        `Add at most ${MAX_SEATS_PER_ZONE} seats at a time — check for a typo`,
+      );
     }
 
     const zone = await this.prisma.zone.findFirst({ where: { id: zoneId, tenantId, branchId } });
