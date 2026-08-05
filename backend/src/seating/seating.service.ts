@@ -103,6 +103,32 @@ export class SeatingService {
     return this.prisma.zone.update({ where: { id: zoneId }, data: { imageUrl } });
   }
 
+  // Refuses to delete a zone with any occupied seats — students sitting
+  // there would silently lose their seat with no record of where. Free
+  // (or already-released) seats are deleted along with the zone itself,
+  // so a mistakenly oversized zone (e.g. a typo'd End Seat) can be cleaned
+  // up from the UI instead of needing a manual DB fix.
+  async deleteZone(tenantId: string, branchId: string, zoneId: string) {
+    const zone = await this.prisma.zone.findFirst({ where: { id: zoneId, tenantId, branchId } });
+    if (!zone) throw new NotFoundException('Zone not found');
+
+    const occupiedCount = await this.prisma.seat.count({
+      where: { zoneId, status: { not: 'FREE' } },
+    });
+    if (occupiedCount > 0) {
+      throw new BadRequestException(
+        `${occupiedCount} seat(s) in this zone still have a member — release them first before deleting the zone`,
+      );
+    }
+
+    await this.prisma.$transaction([
+      this.prisma.seat.deleteMany({ where: { zoneId } }),
+      this.prisma.zone.delete({ where: { id: zoneId } }),
+    ]);
+
+    return { success: true };
+  }
+
   async getSeatMap(tenantId: string, branchId: string) {
     const zones = await this.prisma.zone.findMany({
       where: { tenantId, branchId },

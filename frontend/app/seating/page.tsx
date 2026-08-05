@@ -61,6 +61,22 @@ export default function SeatingPage() {
     }
   };
 
+  const deleteZone = async (zone: any) => {
+    if (!window.confirm(`Delete "${zone.name}" and its ${zone.seats?.length ?? 0} seats? This can't be undone.`)) {
+      return;
+    }
+    setError('');
+    setBusy(true);
+    try {
+      await api.deleteZone(zone.id);
+      refetchZones();
+    } catch (err: any) {
+      setError(err.message || 'Could not delete zone');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const refetchZones = () => {
     api.seatMap().then(setZones).catch(() => {});
   };
@@ -374,12 +390,21 @@ export default function SeatingPage() {
                   {zone.name?.toUpperCase()} · {zone.seats?.length ?? 0} SEATS
                 </h2>
                 {canAddZone && addingSeatsToZone !== zone.id && (
-                  <button
-                    onClick={() => setAddingSeatsToZone(zone.id)}
-                    className="text-[11px] text-accent font-medium shrink-0"
-                  >
-                    + Add Seats
-                  </button>
+                  <div className="flex items-center gap-3 shrink-0">
+                    <button
+                      onClick={() => setAddingSeatsToZone(zone.id)}
+                      className="text-[11px] text-accent font-medium"
+                    >
+                      + Add Seats
+                    </button>
+                    <button
+                      onClick={() => deleteZone(zone)}
+                      disabled={busy}
+                      className="text-[11px] text-expiring font-medium disabled:opacity-60"
+                    >
+                      Delete Zone
+                    </button>
+                  </div>
                 )}
               </div>
               {canAddZone && (

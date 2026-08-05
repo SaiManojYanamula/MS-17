@@ -159,6 +159,7 @@ export const api = {
     return request(`/seating/zones/${zoneId}/image`, { method: 'POST', body: formData });
   },
   deleteZoneImage: (zoneId: string) => request(`/seating/zones/${zoneId}/image`, { method: 'DELETE' }),
+  deleteZone: (zoneId: string) => request(`/seating/zones/${zoneId}`, { method: 'DELETE' }),
 
   payments: (status?: string) => request(`/payments${status ? `?status=${status}` : ''}`),
   paymentsSummary: () => request('/payments/summary'),
