@@ -147,9 +147,12 @@ export default function AddMemberModal({
             <select
               value={seatId}
               onChange={(e) => setSeatId(e.target.value)}
+              required
               className="w-full border border-black/10 rounded-lg px-3 py-2 text-sm"
             >
-              <option value="">No seat yet — assign later from Seating</option>
+              <option value="" disabled>
+                Select a seat…
+              </option>
               {freeSeatsByZone.map((z) => (
                 <optgroup key={z.name} label={z.name}>
                   {z.seats.map((s: any) => (
@@ -160,6 +163,11 @@ export default function AddMemberModal({
                 </optgroup>
               ))}
             </select>
+            {freeSeatsByZone.length === 0 && (
+              <p className="text-[11px] text-expiring mt-1">
+                No free seats available — release a seat first before adding a new member.
+              </p>
+            )}
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
