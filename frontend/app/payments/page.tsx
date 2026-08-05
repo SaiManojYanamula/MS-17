@@ -83,7 +83,7 @@ export default function PaymentsPage() {
           <p className="text-sm text-gray-500">Collections, dues, and transaction history</p>
         </div>
         <div className="flex items-center gap-3">
-          <TopBar placeholder="Search by member name or phone..." value={search} onChange={setSearch} />
+          <TopBar placeholder="Search name or phone..." value={search} onChange={setSearch} />
           <button
             onClick={exportCsv}
             className="border border-black/10 text-sm px-4 py-2 rounded-lg shrink-0"

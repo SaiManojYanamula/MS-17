@@ -218,7 +218,7 @@ export default function SeatingPage() {
           <p className="text-sm text-gray-500">Click any seat for details</p>
         </div>
         <div className="flex items-center gap-3">
-          <TopBar placeholder="Search by seat number or member..." value={search} onChange={setSearch} />
+          <TopBar placeholder="Search seat or member..." value={search} onChange={setSearch} />
           <div className="flex items-center border border-black/10 rounded-lg overflow-hidden shrink-0 text-sm">
             <button
               onClick={() => setView('grid')}

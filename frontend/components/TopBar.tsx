@@ -30,7 +30,7 @@ export default function TopBar({
         <input
           type="text"
           placeholder={placeholder}
-          className="bg-white border border-gray-200 rounded-full text-sm pl-9 pr-4 py-2 w-full md:w-64 focus:outline-none focus:ring-1 focus:ring-accent"
+          className="bg-white border border-gray-200 rounded-full text-sm pl-9 pr-4 py-2 w-full md:w-72 focus:outline-none focus:ring-1 focus:ring-accent"
           {...(value !== undefined ? { value, onChange: (e: any) => onChange?.(e.target.value) } : {})}
         />
       </div>
