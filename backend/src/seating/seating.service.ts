@@ -232,20 +232,30 @@ export class SeatingService {
       throw new BadRequestException('Release this seat before deleting it');
     }
 
-    await this.prisma.seat.delete({ where: { id: seatId } });
+    // Seat numbers are purely in-app labels (no physical seat stickers to
+    // mismatch), so every later seat in the same zone shifts down by one to
+    // close the gap instead of leaving the deleted number permanently
+    // retired. Deleting first, then updating in ascending seatNumber order
+    // within one transaction, means each write lands on a number that's
+    // already been vacated — never colliding with the @@unique([branchId,
+    // seatNumber]) constraint mid-transaction.
+    const laterSeats = await this.prisma.seat.findMany({
+      where: { zoneId: seat.zoneId, seatNumber: { gt: seat.seatNumber } },
+      orderBy: { seatNumber: 'asc' },
+    });
 
-    // If this was the zone's last (highest-numbered) seat, shrink the zone's
-    // stored range to match reality instead of leaving it pointing past the
-    // end of what actually exists.
+    await this.prisma.$transaction([
+      this.prisma.seat.delete({ where: { id: seatId } }),
+      ...laterSeats.map((s) =>
+        this.prisma.seat.update({ where: { id: s.id }, data: { seatNumber: s.seatNumber - 1 } }),
+      ),
+    ]);
+
     const zone = await this.prisma.zone.findUnique({ where: { id: seat.zoneId } });
-    if (zone && seat.seatNumber === zone.endSeat) {
-      const remaining = await this.prisma.seat.aggregate({
-        where: { zoneId: seat.zoneId },
-        _max: { seatNumber: true },
-      });
+    if (zone) {
       await this.prisma.zone.update({
         where: { id: seat.zoneId },
-        data: { endSeat: remaining._max.seatNumber ?? zone.startSeat },
+        data: { endSeat: zone.endSeat - 1 },
       });
     }
 
