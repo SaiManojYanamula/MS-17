@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, Req } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Req } from '@nestjs/common';
 import { NoticesService } from './notices.service';
 import { TenantRequest } from '../common/middleware/tenant.middleware';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -22,6 +22,16 @@ export class NoticesController {
     @Body() body: { title: string; body: string; startDate?: string; endDate?: string },
   ) {
     return this.noticesService.create(req.tenantId!, req.branchId!, body);
+  }
+
+  @Patch(':id')
+  @Roles('TENANT_OWNER', 'BRANCH_MANAGER', 'STAFF')
+  update(
+    @Req() req: TenantRequest,
+    @Param('id') id: string,
+    @Body() body: { title?: string; body?: string; startDate?: string; endDate?: string },
+  ) {
+    return this.noticesService.update(req.tenantId!, id, body);
   }
 
   @Delete(':id')

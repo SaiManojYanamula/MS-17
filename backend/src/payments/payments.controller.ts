@@ -1,11 +1,26 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, Req } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query, Req, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
+import { extname } from 'path';
 import { PaymentsService } from './payments.service';
 import { TenantRequest } from '../common/middleware/tenant.middleware';
 import { Roles } from '../common/decorators/roles.decorator';
+import { R2Service } from '../common/storage/r2.service';
+
+const screenshotUpload = FileInterceptor('screenshot', {
+  storage: memoryStorage(),
+  fileFilter: (_req, file, cb) => {
+    cb(null, /^image\/(jpeg|jpg|png)$/.test(file.mimetype));
+  },
+  limits: { fileSize: 5 * 1024 * 1024 },
+});
 
 @Controller('payments')
 export class PaymentsController {
-  constructor(private paymentsService: PaymentsService) {}
+  constructor(
+    private paymentsService: PaymentsService,
+    private r2Service: R2Service,
+  ) {}
 
   @Get()
   @Roles('TENANT_OWNER', 'BRANCH_MANAGER', 'STAFF')
@@ -21,8 +36,25 @@ export class PaymentsController {
 
   @Post()
   @Roles('TENANT_OWNER', 'BRANCH_MANAGER', 'STAFF')
-  create(@Req() req: TenantRequest, @Body() body: any) {
-    return this.paymentsService.create(req.tenantId!, req.branchId!, body);
+  @UseInterceptors(screenshotUpload)
+  async create(
+    @Req() req: TenantRequest,
+    @Body() body: { memberId: string; amount: string; method: string; label: string; status?: string },
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    let screenshotUrl: string | undefined;
+    if (file) {
+      const unique = `${Date.now()}-${Math.round(Math.random() * 1e9)}${extname(file.originalname)}`;
+      screenshotUrl = await this.r2Service.upload(`payment-screenshots/${unique}`, file.buffer, file.mimetype);
+    }
+    return this.paymentsService.create(req.tenantId!, req.branchId!, {
+      memberId: body.memberId,
+      amount: Number(body.amount),
+      method: body.method,
+      label: body.label,
+      status: body.status || 'PAID',
+      screenshotUrl,
+    });
   }
 
   @Patch(':id/refund')

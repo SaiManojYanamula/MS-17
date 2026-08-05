@@ -159,12 +159,29 @@ export const api = {
     return request(`/seating/zones/${zoneId}/image`, { method: 'POST', body: formData });
   },
   deleteZoneImage: (zoneId: string) => request(`/seating/zones/${zoneId}/image`, { method: 'DELETE' }),
+  renameZone: (zoneId: string, name: string) =>
+    request(`/seating/zones/${zoneId}`, { method: 'PATCH', body: JSON.stringify({ name }) }),
   deleteZone: (zoneId: string) => request(`/seating/zones/${zoneId}`, { method: 'DELETE' }),
 
   payments: (status?: string) => request(`/payments${status ? `?status=${status}` : ''}`),
   paymentsSummary: () => request('/payments/summary'),
-  createPayment: (data: { memberId: string; amount: number; method: string; label: string; status?: string }) =>
-    request('/payments', { method: 'POST', body: JSON.stringify(data) }),
+  createPayment: (data: {
+    memberId: string;
+    amount: number;
+    method: string;
+    label: string;
+    status?: string;
+    screenshot?: File | null;
+  }) => {
+    const formData = new FormData();
+    formData.append('memberId', data.memberId);
+    formData.append('amount', String(data.amount));
+    formData.append('method', data.method);
+    formData.append('label', data.label);
+    if (data.status) formData.append('status', data.status);
+    if (data.screenshot) formData.append('screenshot', data.screenshot);
+    return request('/payments', { method: 'POST', body: formData });
+  },
   refundPayment: (id: string) => request(`/payments/${id}/refund`, { method: 'PATCH' }),
 
   expenses: () => request('/expenses'),
@@ -290,6 +307,10 @@ export const api = {
   notices: () => request('/notices'),
   postNotice: (data: { title: string; body: string; startDate?: string; endDate?: string }) =>
     request('/notices', { method: 'POST', body: JSON.stringify(data) }),
+  updateNotice: (
+    id: string,
+    data: { title?: string; body?: string; startDate?: string; endDate?: string },
+  ) => request(`/notices/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
   deleteNotice: (id: string) => request(`/notices/${id}`, { method: 'DELETE' }),
 
   // Requests

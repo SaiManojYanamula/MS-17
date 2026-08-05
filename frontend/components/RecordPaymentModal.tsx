@@ -15,6 +15,7 @@ export default function RecordPaymentModal({
   const [amount, setAmount] = useState('');
   const [method, setMethod] = useState('UPI');
   const [label, setLabel] = useState('');
+  const [screenshot, setScreenshot] = useState<File | null>(null);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -27,7 +28,7 @@ export default function RecordPaymentModal({
     setError('');
     setSubmitting(true);
     try {
-      await api.createPayment({ memberId, amount: Number(amount), method, label, status: 'PAID' });
+      await api.createPayment({ memberId, amount: Number(amount), method, label, status: 'PAID', screenshot });
       onSuccess();
       onClose();
     } catch (err: any) {
@@ -93,6 +94,15 @@ export default function RecordPaymentModal({
                 <option value="PENDING">Pending</option>
               </select>
             </div>
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Payment Screenshot (optional)</label>
+            <input
+              type="file"
+              accept="image/jpeg,image/png"
+              onChange={(e) => setScreenshot(e.target.files?.[0] ?? null)}
+              className="w-full border border-black/10 rounded-lg px-3 py-2 text-sm file:mr-3 file:border-0 file:bg-accent/10 file:text-accent file:rounded-md file:px-3 file:py-1.5 file:text-xs"
+            />
           </div>
           {error && <p className="text-xs text-expiring">{error}</p>}
           <div className="flex gap-2 pt-2">

@@ -17,7 +17,11 @@ export class SeatingService {
     branchId: string,
     data: { name: string; startSeat: number; endSeat: number },
   ) {
-    const { name, startSeat, endSeat } = data;
+    const name = data.name.trim();
+    const { startSeat, endSeat } = data;
+    if (!name) {
+      throw new BadRequestException('Zone name is required');
+    }
     if (!Number.isInteger(startSeat) || !Number.isInteger(endSeat) || startSeat > endSeat) {
       throw new BadRequestException('Start seat must be less than or equal to end seat');
     }
@@ -97,6 +101,28 @@ export class SeatingService {
     return this.prisma.zone.findUnique({ where: { id: zoneId }, include: { seats: true } });
   }
 
+  // Renaming is the only way to fix a zone that ended up with a duplicate
+  // or wrong name (e.g. two zones both named "A") since createZone only
+  // blocks duplicates going forward, not existing ones.
+  async renameZone(tenantId: string, branchId: string, zoneId: string, name: string) {
+    const trimmed = name.trim();
+    if (!trimmed) {
+      throw new BadRequestException('Zone name is required');
+    }
+
+    const zone = await this.prisma.zone.findFirst({ where: { id: zoneId, tenantId, branchId } });
+    if (!zone) throw new NotFoundException('Zone not found');
+
+    const nameTaken = await this.prisma.zone.findFirst({
+      where: { branchId, name: trimmed, NOT: { id: zoneId } },
+    });
+    if (nameTaken) {
+      throw new BadRequestException(`A zone named "${trimmed}" already exists in this branch`);
+    }
+
+    return this.prisma.zone.update({ where: { id: zoneId }, data: { name: trimmed } });
+  }
+
   async updateZoneImage(tenantId: string, branchId: string, zoneId: string, imageUrl: string | null) {
     const zone = await this.prisma.zone.findFirst({ where: { id: zoneId, tenantId, branchId } });
     if (!zone) throw new NotFoundException('Zone not found');
@@ -160,6 +186,20 @@ export class SeatingService {
   async assignSeat(tenantId: string, seatId: string, memberId: string) {
     const seat = await this.prisma.seat.findFirst({ where: { id: seatId, tenantId } });
     if (!seat) throw new NotFoundException('Seat not found');
+
+    // The target seat already belongs to someone else — overwriting its
+    // memberId here would silently bump that member off their seat with no
+    // record of it (they'd just appear seatless). Require staff to release
+    // that seat first, so this is always a deliberate action.
+    if (seat.memberId && seat.memberId !== memberId) {
+      const currentOccupant = await this.prisma.member.findUnique({
+        where: { id: seat.memberId },
+        select: { name: true },
+      });
+      throw new BadRequestException(
+        `Seat ${seat.seatNumber} is already occupied by ${currentOccupant?.name ?? 'another member'} — release it first.`,
+      );
+    }
 
     await this.prisma.$transaction([
       this.prisma.seat.updateMany({

@@ -19,6 +19,7 @@ export default function NoticesPage() {
   const canManage = hasRole('TENANT_OWNER', 'BRANCH_MANAGER', 'STAFF');
   const [notices, setNotices] = useState<any[]>([]);
   const [showAdd, setShowAdd] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [startDate, setStartDate] = useState('');
@@ -34,6 +35,24 @@ export default function NoticesPage() {
     refetch();
   }, []);
 
+  const resetForm = () => {
+    setTitle('');
+    setBody('');
+    setStartDate('');
+    setEndDate('');
+    setEditingId(null);
+    setShowAdd(false);
+  };
+
+  const startEdit = (n: any) => {
+    setEditingId(n.id);
+    setTitle(n.title);
+    setBody(n.body);
+    setStartDate(n.startDate ? toDateInputValue(new Date(n.startDate)) : '');
+    setEndDate(n.endDate ? toDateInputValue(new Date(n.endDate)) : '');
+    setShowAdd(true);
+  };
+
   const post = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -43,20 +62,25 @@ export default function NoticesPage() {
     }
     setSubmitting(true);
     try {
-      await api.postNotice({
-        title,
-        body,
-        startDate: startDate || undefined,
-        endDate: endDate || undefined,
-      });
-      setTitle('');
-      setBody('');
-      setStartDate('');
-      setEndDate('');
-      setShowAdd(false);
+      if (editingId) {
+        await api.updateNotice(editingId, {
+          title,
+          body,
+          startDate: startDate || '',
+          endDate: endDate || '',
+        });
+      } else {
+        await api.postNotice({
+          title,
+          body,
+          startDate: startDate || undefined,
+          endDate: endDate || undefined,
+        });
+      }
+      resetForm();
       refetch();
     } catch (err: any) {
-      setError(err.message || 'Could not post notice');
+      setError(err.message || 'Could not save notice');
     } finally {
       setSubmitting(false);
     }
@@ -81,7 +105,7 @@ export default function NoticesPage() {
         </div>
         {canManage && (
           <button
-            onClick={() => setShowAdd((v) => !v)}
+            onClick={() => (showAdd ? resetForm() : setShowAdd(true))}
             className="bg-sidebar text-white text-sm px-4 py-2 rounded-lg shrink-0"
           >
             {showAdd ? 'Cancel' : '+ Post Notice'}
@@ -163,7 +187,7 @@ export default function NoticesPage() {
             disabled={submitting}
             className="bg-sidebar text-white text-sm px-4 py-2 rounded-lg disabled:opacity-60"
           >
-            {submitting ? 'Posting…' : 'Post Notice'}
+            {submitting ? 'Saving…' : editingId ? 'Update Notice' : 'Post Notice'}
           </button>
         </form>
       )}
@@ -184,12 +208,14 @@ export default function NoticesPage() {
                 <p className="text-xs text-gray-400 mt-2">{formatDate(n.createdAt)}</p>
               </div>
               {canManage && (
-                <button
-                  onClick={() => remove(n.id)}
-                  className="text-xs text-expiring shrink-0 ml-3"
-                >
-                  Delete
-                </button>
+                <div className="flex items-center gap-3 shrink-0 ml-3">
+                  <button onClick={() => startEdit(n)} className="text-xs text-accent">
+                    Edit
+                  </button>
+                  <button onClick={() => remove(n.id)} className="text-xs text-expiring">
+                    Delete
+                  </button>
+                </div>
               )}
             </div>
           </div>

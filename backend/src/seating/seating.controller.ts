@@ -61,6 +61,16 @@ export class SeatingController {
     return this.seatingService.addSeatsToZone(req.tenantId!, req.branchId!, zoneId, Number(count));
   }
 
+  @Patch('zones/:zoneId')
+  @Roles('TENANT_OWNER', 'BRANCH_MANAGER')
+  renameZone(
+    @Req() req: TenantRequest,
+    @Param('zoneId') zoneId: string,
+    @Body('name') name: string,
+  ) {
+    return this.seatingService.renameZone(req.tenantId!, req.branchId!, zoneId, name);
+  }
+
   @Post('zones/:zoneId/image')
   @Roles('TENANT_OWNER', 'BRANCH_MANAGER')
   @UseInterceptors(zoneImageUpload)

@@ -6,6 +6,7 @@ import { BarChart, Bar, XAxis, Tooltip, Cell, ResponsiveContainer } from 'rechar
 import TopBar from '@/components/TopBar';
 import StatCard from '@/components/StatCard';
 import AddMemberModal from '@/components/AddMemberModal';
+import RenewMemberModal from '@/components/RenewMemberModal';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { formatDate, formatPlan } from '@/lib/format';
@@ -49,6 +50,8 @@ export default function DashboardPage() {
   const [appliedFromDate, setAppliedFromDate] = useState('');
   const [appliedToDate, setAppliedToDate] = useState('');
   const [showAddMember, setShowAddMember] = useState(false);
+  const [expiringSoon, setExpiringSoon] = useState<any[]>([]);
+  const [renewingMember, setRenewingMember] = useState<any>(null);
   const [search, setSearch] = useState('');
 
   const hasDateRange = !!(appliedFromDate && appliedToDate);
@@ -77,6 +80,16 @@ export default function DashboardPage() {
     api.applications('PENDING').then(setPending).catch(() => {});
     api.recentActivity(5).then(setActivity).catch(() => {});
     api.revenueTrend(6).then(setRevenue).catch(() => {});
+    api
+      .members('expiring')
+      .then((res) =>
+        setExpiringSoon(
+          [...(res.members ?? [])].sort(
+            (a: any, b: any) => new Date(a.expiresAt).getTime() - new Date(b.expiresAt).getTime(),
+          ),
+        ),
+      )
+      .catch(() => {});
     refetchNewMembers();
   };
 
@@ -99,6 +112,11 @@ export default function DashboardPage() {
         (m: any) => (m.name ?? '').toLowerCase().includes(q) || (m.phone ?? '').includes(q),
       )
     : newMembers.members;
+  const filteredExpiringSoon = q
+    ? expiringSoon.filter(
+        (m: any) => (m.name ?? '').toLowerCase().includes(q) || (m.phone ?? '').includes(q),
+      )
+    : expiringSoon;
 
   return (
     <div>
@@ -276,6 +294,57 @@ export default function DashboardPage() {
         )}
       </div>
 
+      <div className="bg-card rounded-xl p-5 border border-black/5 mb-6">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="font-serif font-semibold">Expiring Soon</h2>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-400">{expiringSoon.length} in next 7 days</span>
+            <Link href="/members" className="text-xs text-accent font-medium">
+              VIEW ALL
+            </Link>
+          </div>
+        </div>
+        {filteredExpiringSoon.length === 0 ? (
+          <p className="text-sm text-gray-400">
+            {q ? `No expiring members match "${search}".` : 'No memberships expiring in the next 7 days.'}
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[500px]">
+              <thead>
+                <tr className="text-left text-[10px] text-gray-400 tracking-wide">
+                  <th className="pb-2 font-normal">NAME</th>
+                  <th className="pb-2 font-normal">PHONE</th>
+                  <th className="pb-2 font-normal">PLAN</th>
+                  <th className="pb-2 font-normal">SEAT</th>
+                  <th className="pb-2 font-normal">EXPIRES</th>
+                  <th />
+                </tr>
+              </thead>
+              <tbody>
+                {filteredExpiringSoon.map((m: any) => (
+                  <tr key={m.id} className="border-t border-black/5">
+                    <td className="py-2 font-medium">{m.name}</td>
+                    <td className="text-gray-500">{m.phone ?? '—'}</td>
+                    <td>{formatPlan(m.plan)}</td>
+                    <td className="text-gray-500">{m.seat?.seatNumber ?? '—'}</td>
+                    <td className="text-expiring font-medium">{formatDate(m.expiresAt)}</td>
+                    <td className="py-2">
+                      <button
+                        onClick={() => setRenewingMember(m)}
+                        className="text-xs text-free font-medium"
+                      >
+                        Renew
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
       <div className="bg-card rounded-xl p-5 border border-black/5">
         <div className="flex items-center justify-between mb-1">
           <h2 className="font-serif font-semibold">Revenue — Last 6 Months</h2>
@@ -306,6 +375,13 @@ export default function DashboardPage() {
 
       {showAddMember && (
         <AddMemberModal onClose={() => setShowAddMember(false)} onSuccess={refetch} />
+      )}
+      {renewingMember && (
+        <RenewMemberModal
+          member={renewingMember}
+          onClose={() => setRenewingMember(null)}
+          onSuccess={refetch}
+        />
       )}
     </div>
   );

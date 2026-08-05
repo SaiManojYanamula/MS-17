@@ -29,6 +29,7 @@ export default function AddMemberModal({
   const [seatId, setSeatId] = useState('');
   const [amount, setAmount] = useState('');
   const [method, setMethod] = useState('UPI');
+  const [screenshot, setScreenshot] = useState<File | null>(null);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -63,6 +64,7 @@ export default function AddMemberModal({
           method,
           label: `${plan} - Initial Payment`,
           status: 'PAID',
+          screenshot,
         });
       }
       onSuccess();
@@ -184,6 +186,17 @@ export default function AddMemberModal({
               </select>
             </div>
           </div>
+          {Number(amount) > 0 && (
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Payment Screenshot (optional)</label>
+              <input
+                type="file"
+                accept="image/jpeg,image/png"
+                onChange={(e) => setScreenshot(e.target.files?.[0] ?? null)}
+                className="w-full border border-black/10 rounded-lg px-3 py-2 text-sm file:mr-3 file:border-0 file:bg-accent/10 file:text-accent file:rounded-md file:px-3 file:py-1.5 file:text-xs"
+              />
+            </div>
+          )}
           <div>
             <label className="block text-xs text-gray-500 mb-1">Joining Date</label>
             <input

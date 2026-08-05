@@ -22,6 +22,8 @@ export default function SeatingPage() {
   const [showAddZone, setShowAddZone] = useState(false);
   const [addingSeatsToZone, setAddingSeatsToZone] = useState<string | null>(null);
   const [addSeatsCount, setAddSeatsCount] = useState('5');
+  const [renamingZone, setRenamingZone] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState('');
   const [assignMemberId, setAssignMemberId] = useState('');
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('UPI');
@@ -58,6 +60,21 @@ export default function SeatingPage() {
       setError(err.message || 'Could not remove photo');
     } finally {
       setUploadingZoneImage(null);
+    }
+  };
+
+  const renameZone = async (zoneId: string) => {
+    if (!renameValue.trim()) return;
+    setError('');
+    setBusy(true);
+    try {
+      await api.renameZone(zoneId, renameValue.trim());
+      setRenamingZone(null);
+      refetchZones();
+    } catch (err: any) {
+      setError(err.message || 'Could not rename zone');
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -386,11 +403,44 @@ export default function SeatingPage() {
           {visibleZones.map((zone: any) => (
             <div key={zone.id} className="bg-card rounded-xl p-5 border border-black/5">
               <div className="flex items-center justify-between mb-3">
-                <h2 className="text-xs tracking-wide text-gray-500">
-                  {zone.name?.toUpperCase()} · {zone.seats?.length ?? 0} SEATS
-                </h2>
-                {canAddZone && addingSeatsToZone !== zone.id && (
+                {renamingZone === zone.id ? (
+                  <div className="flex items-center gap-2">
+                    <input
+                      autoFocus
+                      value={renameValue}
+                      onChange={(e) => setRenameValue(e.target.value)}
+                      className="border border-black/10 rounded-lg px-2 py-1 text-xs w-40"
+                    />
+                    <button
+                      onClick={() => renameZone(zone.id)}
+                      disabled={busy || !renameValue.trim()}
+                      className="text-[11px] text-free font-medium disabled:opacity-60"
+                    >
+                      Save
+                    </button>
+                    <button
+                      onClick={() => setRenamingZone(null)}
+                      className="text-[11px] text-gray-400"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <h2 className="text-xs tracking-wide text-gray-500">
+                    {zone.name?.toUpperCase()} · {zone.seats?.length ?? 0} SEATS
+                  </h2>
+                )}
+                {canAddZone && addingSeatsToZone !== zone.id && renamingZone !== zone.id && (
                   <div className="flex items-center gap-3 shrink-0">
+                    <button
+                      onClick={() => {
+                        setRenamingZone(zone.id);
+                        setRenameValue(zone.name ?? '');
+                      }}
+                      className="text-[11px] text-accent font-medium"
+                    >
+                      Rename
+                    </button>
                     <button
                       onClick={() => setAddingSeatsToZone(zone.id)}
                       className="text-[11px] text-accent font-medium"
