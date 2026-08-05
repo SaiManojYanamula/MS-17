@@ -6,7 +6,7 @@ import StatusPill from '@/components/StatusPill';
 import RecordPaymentModal from '@/components/RecordPaymentModal';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import { formatDate, memberNameOf } from '@/lib/format';
+import { formatDate, memberNameOf, istDayStart, istDayEnd } from '@/lib/format';
 import { downloadCsv } from '@/lib/csv';
 
 const tabs = ['All Transactions', 'Paid', 'Pending', 'Refunded'];
@@ -28,6 +28,10 @@ export default function PaymentsPage() {
   const [error, setError] = useState('');
   const [refundingId, setRefundingId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+  const [appliedFromDate, setAppliedFromDate] = useState('');
+  const [appliedToDate, setAppliedToDate] = useState('');
 
   const refetch = () => {
     api.paymentsSummary().then(setSummary).catch(() => {});
@@ -37,6 +41,18 @@ export default function PaymentsPage() {
   useEffect(() => {
     refetch();
   }, [tab]);
+
+  const applyDateFilter = () => {
+    setAppliedFromDate(fromDate);
+    setAppliedToDate(toDate);
+  };
+  const clearDateFilter = () => {
+    setFromDate('');
+    setToDate('');
+    setAppliedFromDate('');
+    setAppliedToDate('');
+  };
+  const hasDateFilter = !!(appliedFromDate || appliedToDate);
 
   const exportCsv = () => {
     downloadCsv(
@@ -54,10 +70,23 @@ export default function PaymentsPage() {
   };
 
   const filteredTransactions = transactions.filter((t: any) => {
-    if (!search.trim()) return true;
-    const q = search.trim().toLowerCase();
-    return memberNameOf(t.member).toLowerCase().includes(q) || (t.member?.phone ?? '').includes(q);
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      const matches =
+        memberNameOf(t.member).toLowerCase().includes(q) || (t.member?.phone ?? '').includes(q);
+      if (!matches) return false;
+    }
+    const at = new Date(t.date || t.createdAt).getTime();
+    if (appliedFromDate && at < istDayStart(appliedFromDate)) return false;
+    if (appliedToDate && at > istDayEnd(appliedToDate)) return false;
+    return true;
   });
+  // Due is a per-member "current cycle" figure, not a per-transaction one —
+  // summing it across rows would double-count a member with two payments in
+  // range, so the period total only covers what was actually collected.
+  const periodPaid = filteredTransactions
+    .filter((t: any) => t.status === 'PAID')
+    .reduce((sum: number, t: any) => sum + t.amount, 0);
 
   const refund = async (id: string) => {
     setError('');
@@ -102,7 +131,7 @@ export default function PaymentsPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <div className="bg-card rounded-xl p-4 border border-black/5">
           <div className="w-8 h-8 rounded-lg bg-black/5 flex items-center justify-center mb-3">$</div>
-          <div className="text-2xl font-serif font-semibold">₹{(summary.collectedThisMonth / 1000).toFixed(0)}k</div>
+          <div className="text-2xl font-serif font-semibold">₹{summary.collectedThisMonth.toLocaleString('en-IN')}</div>
           <div className="text-xs text-gray-500">Collected This Month</div>
         </div>
         <div className="bg-card rounded-xl p-4 border border-black/5">
@@ -120,6 +149,47 @@ export default function PaymentsPage() {
           <div className="text-2xl font-serif font-semibold">₹{summary.avgTransaction}</div>
           <div className="text-xs text-gray-500">Avg. Transaction</div>
         </div>
+      </div>
+
+      <div className="bg-card rounded-xl p-4 border border-black/5 mb-6 flex flex-wrap items-end gap-3">
+        <div>
+          <label className="block text-xs text-gray-500 mb-1">From</label>
+          <input
+            type="date"
+            value={fromDate}
+            onChange={(e) => setFromDate(e.target.value)}
+            className="border border-black/10 rounded-lg px-3 py-1.5 text-sm"
+          />
+        </div>
+        <div>
+          <label className="block text-xs text-gray-500 mb-1">To</label>
+          <input
+            type="date"
+            value={toDate}
+            onChange={(e) => setToDate(e.target.value)}
+            className="border border-black/10 rounded-lg px-3 py-1.5 text-sm"
+          />
+        </div>
+        <button
+          onClick={applyDateFilter}
+          disabled={!fromDate && !toDate}
+          className="bg-sidebar text-white text-xs px-3 py-1.5 rounded-lg disabled:opacity-40"
+        >
+          Apply
+        </button>
+        {hasDateFilter && (
+          <button onClick={clearDateFilter} className="text-xs text-gray-400 underline">
+            Clear
+          </button>
+        )}
+        {hasDateFilter && (
+          <div className="ml-auto text-right">
+            <div className="text-xl font-serif font-semibold">₹{periodPaid.toLocaleString('en-IN')}</div>
+            <div className="text-xs text-gray-500">
+              collected from {filteredTransactions.length} transaction{filteredTransactions.length === 1 ? '' : 's'} in this period
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="flex gap-6 border-b border-black/10 mb-4 text-sm overflow-x-auto">

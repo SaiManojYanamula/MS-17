@@ -53,6 +53,8 @@ export default function DashboardPage() {
   const [expiringSoon, setExpiringSoon] = useState<any[]>([]);
   const [renewingMember, setRenewingMember] = useState<any>(null);
   const [search, setSearch] = useState('');
+  const [expensesThisMonth, setExpensesThisMonth] = useState(0);
+  const [noticesThisMonth, setNoticesThisMonth] = useState(0);
 
   const hasDateRange = !!(appliedFromDate && appliedToDate);
 
@@ -80,6 +82,18 @@ export default function DashboardPage() {
     api.applications('PENDING').then(setPending).catch(() => {});
     api.recentActivity(5).then(setActivity).catch(() => {});
     api.revenueTrend(6).then(setRevenue).catch(() => {});
+    api.expensesSummary().then((res) => setExpensesThisMonth(res?.thisMonth ?? 0)).catch(() => {});
+    api
+      .notices()
+      .then((list: any[]) => {
+        const now = new Date();
+        const count = (list ?? []).filter((n: any) => {
+          const at = new Date(n.createdAt);
+          return at.getFullYear() === now.getFullYear() && at.getMonth() === now.getMonth();
+        }).length;
+        setNoticesThisMonth(count);
+      })
+      .catch(() => {});
     api
       .members('expiring')
       .then((res) =>
@@ -136,7 +150,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
         <StatCard icon="👤" value={String(stats.activeMembers)} label="Active Members" />
         <StatCard
           icon="🪑"
@@ -156,6 +170,12 @@ export default function DashboardPage() {
           label="Revenue This Month"
           changePct={stats.revenueChangePct}
         />
+        <StatCard
+          icon="💸"
+          value={`₹${expensesThisMonth.toLocaleString('en-IN')}`}
+          label="Expenses This Month"
+        />
+        <StatCard icon="🔔" value={String(noticesThisMonth)} label="Notices This Month" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">

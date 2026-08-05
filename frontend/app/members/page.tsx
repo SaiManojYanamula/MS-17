@@ -35,7 +35,7 @@ export default function MembersPage() {
   const [editingMember, setEditingMember] = useState<any>(null);
   const [renewingMember, setRenewingMember] = useState<any>(null);
   const [error, setError] = useState('');
-  const [view, setView] = useState<'grid' | 'table'>('grid');
+  const [view, setView] = useState<'grid' | 'table'>('table');
   const highlightId = useSearchParams().get('highlight');
 
   const refetch = () => {
@@ -262,18 +262,18 @@ export default function MembersPage() {
                   <div className="text-xs text-gray-400">{m.goalTag}</div>
                 </div>
               </div>
-              <div className="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+              <div className="flex items-center gap-1.5">
                 <button
                   onClick={() => setRenewingMember(m)}
                   title="Renew"
-                  className="w-7 h-7 rounded-full hover:bg-free/10 hover:text-free text-xs"
+                  className="w-9 h-9 rounded-full bg-free/10 text-free hover:bg-free/20 text-base flex items-center justify-center"
                 >
                   ↻
                 </button>
                 <button
                   onClick={() => setEditingMember(m)}
                   title="Edit"
-                  className="w-7 h-7 rounded-full hover:bg-accent/10 hover:text-accent text-xs"
+                  className="w-9 h-9 rounded-full bg-accent/10 text-accent hover:bg-accent/20 text-base flex items-center justify-center"
                 >
                   ✎
                 </button>
@@ -281,7 +281,7 @@ export default function MembersPage() {
                   <button
                     onClick={() => deleteMember(m)}
                     title="Delete"
-                    className="w-7 h-7 rounded-full hover:bg-expiring/10 text-expiring text-xs"
+                    className="w-9 h-9 rounded-full bg-expiring/10 text-expiring hover:bg-expiring/20 text-base flex items-center justify-center"
                   >
                     🗑
                   </button>
