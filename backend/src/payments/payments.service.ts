@@ -33,7 +33,7 @@ export class PaymentsService {
     const [payments, tenant] = await Promise.all([
       this.prisma.payment.findMany({
         where: { tenantId, branchId, ...(status ? { status } : {}) },
-        include: { member: true },
+        include: { member: { include: { seat: true } } },
         orderBy: { createdAt: 'desc' },
       }),
       this.prisma.tenant.findUnique({

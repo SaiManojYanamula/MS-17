@@ -1,12 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import TopBar from '@/components/TopBar';
 import StatusPill from '@/components/StatusPill';
 import RecordPaymentModal from '@/components/RecordPaymentModal';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import { formatDate, memberNameOf, istDayStart, istDayEnd } from '@/lib/format';
+import { formatDate, memberNameOf, seatNumberOf, istDayStart, istDayEnd } from '@/lib/format';
 import { downloadCsv } from '@/lib/csv';
 
 const tabs = ['All Transactions', 'Paid', 'Pending', 'Refunded'];
@@ -59,13 +59,18 @@ export default function PaymentsPage() {
       `payments-${tab.toLowerCase().replace(/\s+/g, '-')}-${new Date().toISOString().slice(0, 10)}.csv`,
       [
         { header: 'Member', key: 'memberName' },
+        { header: 'Seat', key: 'seatNumber' },
         { header: 'Amount', key: 'amount' },
         { header: 'Method', key: 'method' },
         { header: 'Label', key: 'label' },
         { header: 'Status', key: 'status' },
         { header: 'Date', key: 'createdAt' },
       ],
-      transactions.map((t: any) => ({ ...t, memberName: memberNameOf(t.member) })),
+      transactions.map((t: any) => ({
+        ...t,
+        memberName: memberNameOf(t.member),
+        seatNumber: seatNumberOf(t.member?.seat),
+      })),
     );
   };
 
@@ -87,6 +92,22 @@ export default function PaymentsPage() {
   const periodPaid = filteredTransactions
     .filter((t: any) => t.status === 'PAID')
     .reduce((sum: number, t: any) => sum + t.amount, 0);
+
+  // Transactions arrive newest-first from the API, so grouping while
+  // iterating in that order (via a Map, not a plain object — object keys
+  // that look numeric get silently reordered) keeps months newest-first
+  // with no extra sort needed.
+  const monthGroups = new Map<string, any[]>();
+  for (const t of filteredTransactions) {
+    const d = new Date(t.date || t.createdAt);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    if (!monthGroups.has(key)) monthGroups.set(key, []);
+    monthGroups.get(key)!.push(t);
+  }
+  const monthLabel = (key: string) => {
+    const [y, m] = key.split('-').map(Number);
+    return new Date(y, m - 1, 1).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+  };
 
   const refund = async (id: string) => {
     setError('');
@@ -207,10 +228,11 @@ export default function PaymentsPage() {
       {error && <p className="text-xs text-expiring mb-3">{error}</p>}
 
       <div className="bg-card rounded-xl border border-black/5 overflow-x-auto">
-        <table className="w-full text-sm min-w-[600px]">
+        <table className="w-full text-sm min-w-[700px]">
           <thead>
             <tr className="text-left text-[10px] text-gray-400 tracking-wide border-b border-black/5">
               <th className="p-4 font-normal">MEMBER</th>
+              <th className="font-normal">SEAT</th>
               <th className="font-normal">AMOUNT</th>
               <th className="font-normal">DUE</th>
               <th className="font-normal">METHOD</th>
@@ -220,61 +242,86 @@ export default function PaymentsPage() {
             </tr>
           </thead>
           <tbody>
-            {filteredTransactions.map((t: any) => (
-              <tr key={t.id} className="border-b border-black/5 last:border-0">
-                <td className="p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-sidebar text-white flex items-center justify-center text-xs">
-                      {memberNameOf(t.member).split(' ').map((p: string) => p[0]).join('')}
-                    </div>
-                    <div>
-                      <div className="font-medium">{memberNameOf(t.member)}</div>
-                      <div className="text-xs text-gray-400">{t.label}</div>
-                    </div>
-                  </div>
-                </td>
-                <td>₹{t.amount}</td>
-                <td>
-                  {t.due != null ? (
-                    t.due > 0 ? (
-                      <span className="text-expiring font-medium">₹{t.due}</span>
-                    ) : (
-                      <span className="text-free">Fully Paid</span>
-                    )
-                  ) : (
-                    <span className="text-gray-300">—</span>
-                  )}
-                </td>
-                <td>
-                  <span className="text-xs bg-black/5 rounded-full px-2 py-0.5">{t.method}</span>
-                  {t.screenshotUrl && (
-                    <a
-                      href={t.screenshotUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block text-[11px] text-accent underline mt-1"
-                    >
-                      View Screenshot
-                    </a>
-                  )}
-                </td>
-                <td>{formatDate(t.date || t.createdAt)}</td>
-                <td>
-                  <StatusPill status={t.status} />
-                </td>
-                <td className="p-4">
-                  {hasRole('TENANT_OWNER', 'BRANCH_MANAGER') && t.status === 'PAID' && (
-                    <button
-                      onClick={() => refund(t.id)}
-                      disabled={refundingId === t.id}
-                      className="text-xs text-expiring disabled:opacity-60"
-                    >
-                      {refundingId === t.id ? 'Refunding…' : 'Refund'}
-                    </button>
-                  )}
+            {monthGroups.size === 0 && (
+              <tr>
+                <td colSpan={8} className="p-8 text-center text-gray-400">
+                  No transactions match.
                 </td>
               </tr>
-            ))}
+            )}
+            {Array.from(monthGroups.entries()).map(([key, rows]) => {
+              const monthCollected = rows
+                .filter((t: any) => t.status === 'PAID')
+                .reduce((sum: number, t: any) => sum + t.amount, 0);
+              return (
+                <Fragment key={key}>
+                  <tr className="bg-black/[0.02] border-b border-black/5">
+                    <td colSpan={8} className="px-4 py-2 text-xs font-medium text-gray-600">
+                      {monthLabel(key)}
+                      <span className="text-gray-400 font-normal ml-2">
+                        ₹{monthCollected.toLocaleString('en-IN')} collected · {rows.length} transaction{rows.length === 1 ? '' : 's'}
+                      </span>
+                    </td>
+                  </tr>
+                  {rows.map((t: any) => (
+                    <tr key={t.id} className="border-b border-black/5 last:border-0">
+                      <td className="p-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-sidebar text-white flex items-center justify-center text-xs">
+                            {memberNameOf(t.member).split(' ').map((p: string) => p[0]).join('')}
+                          </div>
+                          <div>
+                            <div className="font-medium">{memberNameOf(t.member)}</div>
+                            <div className="text-xs text-gray-400">{t.label}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="text-gray-500">#{seatNumberOf(t.member?.seat)}</td>
+                      <td>₹{t.amount}</td>
+                      <td>
+                        {t.due != null ? (
+                          t.due > 0 ? (
+                            <span className="text-expiring font-medium">₹{t.due}</span>
+                          ) : (
+                            <span className="text-free">Fully Paid</span>
+                          )
+                        ) : (
+                          <span className="text-gray-300">—</span>
+                        )}
+                      </td>
+                      <td>
+                        <span className="text-xs bg-black/5 rounded-full px-2 py-0.5">{t.method}</span>
+                        {t.screenshotUrl && (
+                          <a
+                            href={t.screenshotUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="block text-[11px] text-accent underline mt-1"
+                          >
+                            View Screenshot
+                          </a>
+                        )}
+                      </td>
+                      <td>{formatDate(t.date || t.createdAt)}</td>
+                      <td>
+                        <StatusPill status={t.status} />
+                      </td>
+                      <td className="p-4">
+                        {hasRole('TENANT_OWNER', 'BRANCH_MANAGER') && t.status === 'PAID' && (
+                          <button
+                            onClick={() => refund(t.id)}
+                            disabled={refundingId === t.id}
+                            className="text-xs text-expiring disabled:opacity-60"
+                          >
+                            {refundingId === t.id ? 'Refunding…' : 'Refund'}
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </Fragment>
+              );
+            })}
           </tbody>
         </table>
       </div>
