@@ -163,14 +163,14 @@ export default function AddMemberModal({
                 </optgroup>
               ))}
             </select>
-            {freeSeatsByZone.length === 0 && (
+            {/* {freeSeatsByZone.length === 0 && (
               <p className="text-[11px] text-expiring mt-1">
                 No free seats available — release a seat first before adding a new member.
               </p>
-            )}
+            )} */}
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <div>
+            {/* <div>
               <label className="block text-xs text-gray-500 mb-1">Amount Paid (₹, optional)</label>
               <input
                 type="number"
@@ -180,7 +180,20 @@ export default function AddMemberModal({
                 placeholder="0"
                 className="w-full border border-black/10 rounded-lg px-3 py-2 text-sm"
               />
-            </div>
+            </div> */}
+
+ <div>
+  <label className="block text-xs text-gray-500 mb-1">Amount Paid (₹)</label>
+  <input
+    type="number"
+    min="1"
+    value={amount}
+    onChange={(e) => setAmount(e.target.value)}
+    placeholder="0"
+    required
+    className="w-full border border-black/10 rounded-lg px-3 py-2 text-sm"
+  />
+</div>
             <div>
               <label className="block text-xs text-gray-500 mb-1">Method</label>
               <select

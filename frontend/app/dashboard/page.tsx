@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { BarChart, Bar, XAxis, Tooltip, Cell, ResponsiveContainer } from 'recharts';
+// import { BarChart, Bar, XAxis, Tooltip, Cell, ResponsiveContainer } from 'recharts';
+import { AreaChart, Area, XAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import TopBar from '@/components/TopBar';
 import StatCard from '@/components/StatCard';
 import AddMemberModal from '@/components/AddMemberModal';
@@ -137,7 +138,7 @@ export default function DashboardPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <div>
           <h1 className="text-2xl font-serif font-semibold">Good morning{firstName ? `, ${firstName}` : ''}</h1>
-          <p className="text-sm text-gray-500">Room status: Open</p>
+          {/* <p className="text-sm text-gray-500">Room status: Active</p> */}
         </div>
         <div className="flex items-center gap-3">
           <TopBar placeholder="Search applicant or member..." value={search} onChange={setSearch} />
@@ -154,16 +155,11 @@ export default function DashboardPage() {
         <StatCard icon="👤" value={String(stats.activeMembers)} label="Active Members" />
         <StatCard
           icon="🪑"
-          value={`${stats.seatsOccupied} filled · ${stats.seatsTotal - stats.seatsOccupied} free`}
+          value={`${stats.seatsOccupied} filled seats , ${stats.seatsTotal - stats.seatsOccupied} free seats`}
           label={`Seats (${stats.seatsTotal} total)`}
           changePct={26}
         />
-        <StatCard
-          icon="📥"
-          value={String(stats.pendingApplications)}
-          label="Pending Applications"
-          actionNeeded={stats.pendingApplications > 0}
-        />
+       
         <StatCard
           icon="₹"
           value={`₹${(stats.revenueThisMonth / 100000).toFixed(2)}L`}
@@ -174,6 +170,12 @@ export default function DashboardPage() {
           icon="💸"
           value={`₹${expensesThisMonth.toLocaleString('en-IN')}`}
           label="Expenses This Month"
+        />
+         <StatCard
+          icon="📥"
+          value={String(stats.pendingApplications)}
+          label="Pending Applications"
+          actionNeeded={stats.pendingApplications > 0}
         />
         <StatCard icon="🔔" value={String(noticesThisMonth)} label="Notices This Month" />
       </div>
@@ -373,7 +375,7 @@ export default function DashboardPage() {
           ₹{stats.revenueThisMonth.toLocaleString('en-IN')}
           <span className="text-xs text-free ml-2 font-sans">+{stats.revenueChangePct}% vs last</span>
         </div>
-        <div className="h-32">
+        {/* <div className="h-32">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={revenue} margin={{ top: 4, right: 4, left: 4, bottom: 0 }}>
               <XAxis
@@ -390,7 +392,33 @@ export default function DashboardPage() {
               </Bar>
             </BarChart>
           </ResponsiveContainer>
-        </div>
+        </div> */}
+   <div className="h-32">
+  <ResponsiveContainer width="100%" height="100%">
+    <AreaChart data={revenue} margin={{ top: 4, right: 4, left: 4, bottom: 0 }}>
+      <defs>
+        <linearGradient id="revenueFill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={CHART_ACCENT} stopOpacity={0.35} />
+          <stop offset="100%" stopColor={CHART_ACCENT} stopOpacity={0.02} />
+        </linearGradient>
+      </defs>
+      <XAxis
+        dataKey="month"
+        axisLine={false}
+        tickLine={false}
+        tick={{ fontSize: 10, fill: CHART_MUTED }}
+      />
+      <Tooltip content={<RevenueTooltip />} cursor={{ stroke: CHART_ACCENT, strokeWidth: 1 }} />
+      <Area
+        type="monotone"
+        dataKey="total"
+        stroke={CHART_ACCENT}
+        strokeWidth={2}
+        fill="url(#revenueFill)"
+      />
+    </AreaChart>
+  </ResponsiveContainer>
+</div>
       </div>
 
       {showAddMember && (
