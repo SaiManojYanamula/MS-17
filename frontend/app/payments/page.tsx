@@ -260,7 +260,7 @@ export default function PaymentsPage() {
       <div className="bg-card rounded-xl border border-black/5 overflow-x-auto">
         <table className="w-full text-sm min-w-[600px]">
           <thead>
-            <tr className="text-left text-[10px] text-gray-400 tracking-wide border-b border-black/5">
+            <tr className="text-left text-[11px] text-gray-600 font-semibold tracking-wide border-b border-black/5">
               <th className="p-4 font-normal">MEMBER</th>
               <th className="font-normal">SEAT</th>
               <th className="font-normal">PLAN FEE</th>
@@ -311,7 +311,7 @@ export default function PaymentsPage() {
       <div className="bg-card rounded-xl border border-black/5 overflow-x-auto">
         <table className="w-full text-sm min-w-[800px]">
           <thead>
-            <tr className="text-left text-[10px] text-gray-400 tracking-wide border-b border-black/5">
+            <tr className="text-left text-[11px] text-gray-600 font-semibold tracking-wide border-b border-black/5">
               <th className="p-4 font-normal">MEMBER</th>
               <th className="font-normal">SEAT</th>
               <th className="font-normal">PLAN FEE</th>
