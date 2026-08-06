@@ -60,7 +60,9 @@ export default function PaymentsPage() {
       [
         { header: 'Member', key: 'memberName' },
         { header: 'Seat', key: 'seatNumber' },
+        { header: 'Plan Fee', key: 'fee' },
         { header: 'Amount', key: 'amount' },
+        { header: 'Due', key: 'due' },
         { header: 'Method', key: 'method' },
         { header: 'Label', key: 'label' },
         { header: 'Status', key: 'status' },
@@ -228,13 +230,14 @@ export default function PaymentsPage() {
       {error && <p className="text-xs text-expiring mb-3">{error}</p>}
 
       <div className="bg-card rounded-xl border border-black/5 overflow-x-auto">
-        <table className="w-full text-sm min-w-[700px]">
+        <table className="w-full text-sm min-w-[800px]">
           <thead>
             <tr className="text-left text-[10px] text-gray-400 tracking-wide border-b border-black/5">
               <th className="p-4 font-normal">MEMBER</th>
               <th className="font-normal">SEAT</th>
-              <th className="font-normal">AMOUNT</th>
-              <th className="font-normal">DUE</th>
+              <th className="font-normal">PLAN FEE</th>
+              <th className="font-normal">PAID (THIS)</th>
+              <th className="font-normal">DUE (CYCLE)</th>
               <th className="font-normal">METHOD</th>
               <th className="font-normal">DATE</th>
               <th className="font-normal">STATUS</th>
@@ -244,7 +247,7 @@ export default function PaymentsPage() {
           <tbody>
             {monthGroups.size === 0 && (
               <tr>
-                <td colSpan={8} className="p-8 text-center text-gray-400">
+                <td colSpan={9} className="p-8 text-center text-gray-400">
                   No transactions match.
                 </td>
               </tr>
@@ -256,7 +259,7 @@ export default function PaymentsPage() {
               return (
                 <Fragment key={key}>
                   <tr className="bg-black/[0.02] border-b border-black/5">
-                    <td colSpan={8} className="px-4 py-2 text-xs font-medium text-gray-600">
+                    <td colSpan={9} className="px-4 py-2 text-xs font-medium text-gray-600">
                       {monthLabel(key)}
                       <span className="text-gray-400 font-normal ml-2">
                         ₹{monthCollected.toLocaleString('en-IN')} collected · {rows.length} transaction{rows.length === 1 ? '' : 's'}
@@ -273,10 +276,14 @@ export default function PaymentsPage() {
                           <div>
                             <div className="font-medium">{memberNameOf(t.member)}</div>
                             <div className="text-xs text-gray-400">{t.label}</div>
+                            {t.member?.joinedAt && (
+                              <div className="text-[11px] text-gray-300">Joined {formatDate(t.member.joinedAt)}</div>
+                            )}
                           </div>
                         </div>
                       </td>
                       <td className="text-gray-500">#{seatNumberOf(t.member?.seat)}</td>
+                      <td className="text-gray-500">{t.fee != null ? `₹${t.fee}` : '—'}</td>
                       <td>₹{t.amount}</td>
                       <td>
                         {t.due != null ? (
