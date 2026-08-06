@@ -35,6 +35,7 @@ export class AuthService {
         branchId: user.branchId ?? undefined,
         role: user.role,
         memberId: user.memberId ?? undefined,
+        tokenVersion: user.tokenVersion,
       },
       process.env.JWT_SECRET as string,
       { expiresIn: '7d' },
@@ -127,7 +128,13 @@ export class AuthService {
     if (!user) throw new NotFoundException('Account not found');
 
     const hashed = await bcrypt.hash(newPassword, 10);
-    await this.prisma.user.update({ where: { id: userId }, data: { password: hashed } });
+    // Bumping tokenVersion invalidates every JWT already issued to this
+    // user — otherwise a reset password wouldn't actually log anyone out,
+    // since JWTs stay valid on their own for up to 7 days regardless.
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { password: hashed, tokenVersion: { increment: 1 } },
+    });
     return { success: true };
   }
 

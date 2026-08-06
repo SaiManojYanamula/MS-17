@@ -32,7 +32,14 @@ export class TenantMiddleware implements NestMiddleware {
 
     const token = authHeader.replace('Bearer ', '');
 
-    let payload: { sub: string; tenantId: string; branchId?: string; role: string; memberId?: string };
+    let payload: {
+      sub: string;
+      tenantId: string;
+      branchId?: string;
+      role: string;
+      memberId?: string;
+      tokenVersion?: number;
+    };
     try {
       payload = jwt.verify(token, process.env.JWT_SECRET as string) as typeof payload;
     } catch {
@@ -45,18 +52,25 @@ export class TenantMiddleware implements NestMiddleware {
     req.role = payload.role;
     req.memberId = payload.memberId;
 
-    // A JWT lives for 7 days, so a super-admin suspending an org (or toggling
-    // a feature) mid-session must still take effect immediately rather than
-    // waiting for token expiry.
+    // A JWT lives for 7 days, so both a super-admin suspending an org (or
+    // toggling a feature) and a password reset must still take effect
+    // immediately rather than waiting for token expiry. tokenVersion is
+    // bumped on every password reset — a mismatch here means this token was
+    // issued before that reset and is no longer good, even though its
+    // signature and expiry are still technically valid.
+    const user = await this.prisma.user.findUnique({
+      where: { id: payload.sub },
+      select: { tokenVersion: true, tenant: { select: { status: true, enabledFeatures: true } } },
+    });
+    if (!user || (payload.tokenVersion ?? 0) !== user.tokenVersion) {
+      return next(new UnauthorizedException('Session expired — please log in again'));
+    }
+
     if (payload.tenantId && payload.role !== 'SUPER_ADMIN') {
-      const tenant = await this.prisma.tenant.findUnique({
-        where: { id: payload.tenantId },
-        select: { status: true, enabledFeatures: true },
-      });
-      if (tenant?.status === 'SUSPENDED') {
+      if (user.tenant?.status === 'SUSPENDED') {
         return next(new ForbiddenException('Your organization access has been suspended. Contact the platform admin.'));
       }
-      req.enabledFeatures = tenant?.enabledFeatures ? tenant.enabledFeatures.split(',') : [];
+      req.enabledFeatures = user.tenant?.enabledFeatures ? user.tenant.enabledFeatures.split(',') : [];
     }
 
     // A client may ask to act against a different branch than the one baked

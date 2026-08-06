@@ -224,7 +224,12 @@ export class MembersService {
     if (!member.user) throw new BadRequestException('This member does not have a login yet');
 
     const hashed = await bcrypt.hash(newPassword, 10);
-    await this.prisma.user.update({ where: { id: member.user.id }, data: { password: hashed } });
+    // tokenVersion bump invalidates any JWT already issued to this login —
+    // otherwise resetting the password wouldn't actually sign anyone out.
+    await this.prisma.user.update({
+      where: { id: member.user.id },
+      data: { password: hashed, tokenVersion: { increment: 1 } },
+    });
     return { success: true };
   }
 
