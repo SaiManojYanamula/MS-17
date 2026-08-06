@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
+import { formatPlan } from '@/lib/format';
 
 export default function RecordPaymentModal({
   onClose,
@@ -15,6 +16,7 @@ export default function RecordPaymentModal({
   const [amount, setAmount] = useState('');
   const [method, setMethod] = useState('UPI');
   const [label, setLabel] = useState('');
+  const [labelTouched, setLabelTouched] = useState(false);
   const [screenshot, setScreenshot] = useState<File | null>(null);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -22,6 +24,16 @@ export default function RecordPaymentModal({
   useEffect(() => {
     api.members().then((res) => setMembers(res.members ?? [])).catch(() => {});
   }, []);
+
+  // Auto-fills from the selected member's plan so staff isn't forced to
+  // type a label for every payment — still editable for anything unusual
+  // (a late fee, an advance, etc.), and stops auto-updating the moment
+  // they've typed something of their own so it never clobbers that.
+  useEffect(() => {
+    if (labelTouched) return;
+    const member = members.find((m) => m.id === memberId);
+    if (member) setLabel(`${formatPlan(member.plan)} - Renewal`);
+  }, [memberId, members, labelTouched]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,11 +75,15 @@ export default function RecordPaymentModal({
             <label className="block text-xs text-gray-500 mb-1">Label</label>
             <input
               value={label}
-              onChange={(e) => setLabel(e.target.value)}
+              onChange={(e) => {
+                setLabel(e.target.value);
+                setLabelTouched(true);
+              }}
               required
               placeholder="e.g. Monthly Renewal"
               className="w-full border border-black/10 rounded-lg px-3 py-2 text-sm"
             />
+            <p className="text-[11px] text-gray-400 mt-1">Auto-fills from the member's plan — edit if needed.</p>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>

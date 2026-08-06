@@ -19,6 +19,8 @@ export default function SeatingPage() {
   const [selectedSeatId, setSelectedSeatId] = useState<string | null>(null);
   const [seat, setSeat] = useState<any>(null);
   const [editing, setEditing] = useState(false);
+  const [transferring, setTransferring] = useState(false);
+  const [transferSeatId, setTransferSeatId] = useState('');
   const [showAddZone, setShowAddZone] = useState(false);
   const [addingSeatsToZone, setAddingSeatsToZone] = useState<string | null>(null);
   const [addSeatsCount, setAddSeatsCount] = useState('5');
@@ -134,6 +136,8 @@ export default function SeatingPage() {
 
   useEffect(() => {
     setEditing(false);
+    setTransferring(false);
+    setTransferSeatId('');
     setAssignMemberId('');
     if (!selectedSeatId) {
       setSeat(null);
@@ -153,6 +157,10 @@ export default function SeatingPage() {
   const visibleZones = zones
     .map((z: any) => ({ ...z, seats: (z.seats ?? []).filter(matchesSearch) }))
     .filter((z: any) => !search.trim() || z.seats.length > 0);
+
+  const freeSeatsByZone = zones
+    .map((z: any) => ({ name: z.name, seats: (z.seats ?? []).filter((s: any) => s.status === 'FREE') }))
+    .filter((z: any) => z.seats.length > 0);
 
   const allSeats = zones.flatMap((z: any) => z.seats ?? []);
   const seatCounts = {
@@ -186,6 +194,25 @@ export default function SeatingPage() {
       setEditing(false);
     } catch (err: any) {
       setError(err.message || 'Could not assign seat');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // Moves the current occupant to a different free seat in one step —
+  // assignSeat() on the backend already releases whichever other seat that
+  // member currently holds before assigning the new one, so there's no gap
+  // where they're seatless in between.
+  const transferSeat = async () => {
+    if (!seat?.memberId || !transferSeatId) return;
+    setError('');
+    setBusy(true);
+    try {
+      await api.assignSeat(transferSeatId, seat.memberId);
+      refetchZones();
+      setSelectedSeatId(transferSeatId);
+    } catch (err: any) {
+      setError(err.message || 'Could not transfer seat');
     } finally {
       setBusy(false);
     }
@@ -577,7 +604,7 @@ export default function SeatingPage() {
 
               {error && <p className="text-xs text-expiring mb-3">{error}</p>}
 
-              {canManage && seat.status !== 'FREE' && !editing && (
+              {canManage && seat.status !== 'FREE' && !editing && !transferring && (
                 <>
                   <Link
                     href={`/members?highlight=${seat.memberId}`}
@@ -585,6 +612,12 @@ export default function SeatingPage() {
                   >
                     View Member Profile
                   </Link>
+                  <button
+                    onClick={() => setTransferring(true)}
+                    className="w-full border border-black/10 text-sm py-2.5 rounded-lg mb-2"
+                  >
+                    Transfer to Another Seat
+                  </button>
                   <button
                     onClick={() => setEditing(true)}
                     className="w-full border border-black/10 text-sm py-2.5 rounded-lg mb-2"
@@ -599,6 +632,46 @@ export default function SeatingPage() {
                     {busy ? 'Releasing…' : 'Release Seat'}
                   </button>
                 </>
+              )}
+
+              {canManage && seat.status !== 'FREE' && transferring && (
+                <div className="space-y-2">
+                  <label className="block text-xs text-gray-500 mb-1">Move {memberNameOf(seat.member)} to</label>
+                  <select
+                    value={transferSeatId}
+                    onChange={(e) => setTransferSeatId(e.target.value)}
+                    className="w-full border border-black/10 rounded-lg px-3 py-2 text-sm"
+                  >
+                    <option value="">Select a free seat…</option>
+                    {freeSeatsByZone.map((z: any) => (
+                      <optgroup key={z.name} label={z.name}>
+                        {z.seats.map((s: any) => (
+                          <option key={s.id} value={s.id}>
+                            Seat {s.seatNumber}
+                          </option>
+                        ))}
+                      </optgroup>
+                    ))}
+                  </select>
+                  <div className="flex gap-2 pt-1">
+                    <button
+                      onClick={() => {
+                        setTransferring(false);
+                        setTransferSeatId('');
+                      }}
+                      className="flex-1 border border-black/10 text-sm py-2.5 rounded-lg"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={transferSeat}
+                      disabled={busy || !transferSeatId}
+                      className="flex-1 bg-sidebar text-white text-sm py-2.5 rounded-lg font-medium disabled:opacity-60"
+                    >
+                      {busy ? 'Moving…' : 'Move'}
+                    </button>
+                  </div>
+                </div>
               )}
 
               {canManage && seat.status !== 'FREE' && editing && (
