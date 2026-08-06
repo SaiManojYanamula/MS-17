@@ -61,13 +61,11 @@ export class SeatingService {
   }
 
   // Adds `count` more seats to an existing zone. Prefers continuing right
-  // after this zone's own endSeat — deleteSeat() keeps endSeat accurate by
-  // renumbering the zone's later seats on every delete, so a zone that lost
-  // seats has a genuinely free gap right after it (e.g. Zone A 1-10 loses
-  // seat 1, renumbers to 1-9 — seat 10 is free and should be reused, not
-  // skipped). Only falls back to the branch's highest seat number + 1 when
-  // that immediate range is actually taken by another zone (e.g. zones
-  // packed with no gap between them), to avoid colliding with it.
+  // after this zone's own true highest seat number — a zone that lost seats
+  // has a genuinely free gap right after it (e.g. Zone A 1-10 loses seat 1,
+  // renumbers to 1-9 — seat 10 is free and should be reused, not skipped).
+  // Only falls back to the branch's highest seat number + 1 when that
+  // immediate range is actually taken by another zone, to avoid colliding.
   async addSeatsToZone(tenantId: string, branchId: string, zoneId: string, count: number) {
     if (!Number.isInteger(count) || count < 1) {
       throw new BadRequestException('Enter a valid number of seats to add');
@@ -81,7 +79,16 @@ export class SeatingService {
     const zone = await this.prisma.zone.findFirst({ where: { id: zoneId, tenantId, branchId } });
     if (!zone) throw new NotFoundException('Zone not found');
 
-    let startSeat = zone.endSeat + 1;
+    // Derived from the zone's actual seats, never trusted from the stored
+    // endSeat alone — rows created/deleted before endSeat was kept in sync
+    // (or any other drift) would otherwise silently propagate a wrong number.
+    const zoneMax = await this.prisma.seat.aggregate({
+      where: { zoneId: zone.id },
+      _max: { seatNumber: true },
+    });
+    const zoneEnd = zoneMax._max.seatNumber ?? zone.startSeat - 1;
+
+    let startSeat = zoneEnd + 1;
     let endSeat = startSeat + count - 1;
     const overlap = await this.prisma.seat.findFirst({
       where: { branchId, seatNumber: { gte: startSeat, lte: endSeat } },
@@ -91,7 +98,7 @@ export class SeatingService {
         where: { branchId },
         _max: { seatNumber: true },
       });
-      startSeat = Math.max(highest._max.seatNumber ?? 0, zone.endSeat) + 1;
+      startSeat = Math.max(highest._max.seatNumber ?? 0, zoneEnd) + 1;
       endSeat = startSeat + count - 1;
     }
 
@@ -263,9 +270,17 @@ export class SeatingService {
 
     const zone = await this.prisma.zone.findUnique({ where: { id: seat.zoneId } });
     if (zone) {
+      // Derived from the zone's actual remaining seats rather than
+      // zone.endSeat - 1 — self-heals endSeat back to reality for any zone
+      // whose stored value had already drifted stale before this method
+      // started keeping it in sync.
+      const remaining = await this.prisma.seat.aggregate({
+        where: { zoneId: seat.zoneId },
+        _max: { seatNumber: true },
+      });
       await this.prisma.zone.update({
         where: { id: seat.zoneId },
-        data: { endSeat: zone.endSeat - 1 },
+        data: { endSeat: remaining._max.seatNumber ?? zone.startSeat - 1 },
       });
     }
 
