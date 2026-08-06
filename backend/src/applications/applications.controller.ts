@@ -27,12 +27,12 @@ export class ApplicationsController {
   @Patch(':id/approve')
   @Roles('TENANT_OWNER', 'BRANCH_MANAGER', 'STAFF')
   approve(@Req() req: TenantRequest, @Param('id') id: string) {
-    return this.applicationsService.approve(req.tenantId!, id);
+    return this.applicationsService.approve(req.tenantId!, req.branchId!, id);
   }
 
   @Patch(':id/reject')
   @Roles('TENANT_OWNER', 'BRANCH_MANAGER', 'STAFF')
   reject(@Req() req: TenantRequest, @Param('id') id: string) {
-    return this.applicationsService.reject(req.tenantId!, id);
+    return this.applicationsService.reject(req.tenantId!, req.branchId!, id);
   }
 }

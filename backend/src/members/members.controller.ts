@@ -38,13 +38,13 @@ export class MembersController {
     if (!req.memberId) {
       throw new ForbiddenException('No member profile linked to this account');
     }
-    return this.membersService.findOne(req.tenantId!, req.memberId);
+    return this.membersService.findOne(req.tenantId!, req.branchId!, req.memberId);
   }
 
   @Get(':id')
   @Roles('TENANT_OWNER', 'BRANCH_MANAGER', 'STAFF')
   findOne(@Req() req: TenantRequest, @Param('id') id: string) {
-    return this.membersService.findOne(req.tenantId!, id);
+    return this.membersService.findOne(req.tenantId!, req.branchId!, id);
   }
 
   @Post()
@@ -66,7 +66,7 @@ export class MembersController {
   @Patch(':id')
   @Roles('TENANT_OWNER', 'BRANCH_MANAGER', 'STAFF')
   update(@Req() req: TenantRequest, @Param('id') id: string, @Body() body: any) {
-    return this.membersService.update(req.tenantId!, id, body);
+    return this.membersService.update(req.tenantId!, req.branchId!, id, body);
   }
 
   // Admin-side equivalent of the student portal's "renew + auto-resolve"
@@ -85,7 +85,7 @@ export class MembersController {
   @Delete(':id')
   @Roles('TENANT_OWNER', 'BRANCH_MANAGER')
   remove(@Req() req: TenantRequest, @Param('id') id: string) {
-    return this.membersService.remove(req.tenantId!, id);
+    return this.membersService.remove(req.tenantId!, req.branchId!, id);
   }
 
   // "Forgot password" for students — there's no live SMS/email delivery yet,
@@ -93,6 +93,6 @@ export class MembersController {
   @Patch(':id/reset-password')
   @Roles('TENANT_OWNER', 'BRANCH_MANAGER', 'STAFF')
   resetPassword(@Req() req: TenantRequest, @Param('id') id: string, @Body('password') password: string) {
-    return this.membersService.resetLoginPassword(req.tenantId!, id, password);
+    return this.membersService.resetLoginPassword(req.tenantId!, req.branchId!, id, password);
   }
 }

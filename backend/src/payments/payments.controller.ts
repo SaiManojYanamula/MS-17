@@ -60,6 +60,6 @@ export class PaymentsController {
   @Patch(':id/refund')
   @Roles('TENANT_OWNER', 'BRANCH_MANAGER')
   refund(@Req() req: TenantRequest, @Param('id') id: string) {
-    return this.paymentsService.refund(req.tenantId!, id);
+    return this.paymentsService.refund(req.tenantId!, req.branchId!, id);
   }
 }

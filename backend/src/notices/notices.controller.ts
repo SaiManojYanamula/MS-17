@@ -12,7 +12,7 @@ export class NoticesController {
   // No @Roles — every authenticated tenant member (staff or student) can read notices.
   @Get()
   findAll(@Req() req: TenantRequest) {
-    return this.noticesService.findAll(req.tenantId!);
+    return this.noticesService.findAll(req.tenantId!, req.branchId!);
   }
 
   @Post()
@@ -31,12 +31,12 @@ export class NoticesController {
     @Param('id') id: string,
     @Body() body: { title?: string; body?: string; startDate?: string; endDate?: string },
   ) {
-    return this.noticesService.update(req.tenantId!, id, body);
+    return this.noticesService.update(req.tenantId!, req.branchId!, id, body);
   }
 
   @Delete(':id')
   @Roles('TENANT_OWNER', 'BRANCH_MANAGER', 'STAFF')
   remove(@Req() req: TenantRequest, @Param('id') id: string) {
-    return this.noticesService.remove(req.tenantId!, id);
+    return this.noticesService.remove(req.tenantId!, req.branchId!, id);
   }
 }

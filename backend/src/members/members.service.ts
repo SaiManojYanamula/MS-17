@@ -92,9 +92,9 @@ export class MembersService {
     return { all, active, expiring, expired };
   }
 
-  async findOne(tenantId: string, id: string) {
+  async findOne(tenantId: string, branchId: string, id: string) {
     const member = await this.prisma.member.findFirst({
-      where: { id, tenantId }, // tenantId check prevents cross-tenant access
+      where: { id, tenantId, branchId }, // tenantId+branchId check prevents cross-tenant/cross-branch access
       include: {
         seat: true,
         payments: true,
@@ -130,9 +130,9 @@ export class MembersService {
   // renewal request (extend expiry + book the payment), for a student who
   // paid in person or by phone instead of through the portal.
   async renew(tenantId: string, branchId: string, memberId: string, amount: number, method: string) {
-    const member = await this.findOne(tenantId, memberId);
+    const member = await this.findOne(tenantId, branchId, memberId);
     const newExpiry = this.computeRenewalExpiry(member.plan, member.expiresAt);
-    await this.update(tenantId, memberId, { expiresAt: newExpiry });
+    await this.update(tenantId, branchId, memberId, { expiresAt: newExpiry });
     await this.prisma.payment.create({
       data: {
         tenantId,
@@ -144,7 +144,7 @@ export class MembersService {
         label: `${member.plan} - Renewal`,
       },
     });
-    return this.findOne(tenantId, memberId);
+    return this.findOne(tenantId, branchId, memberId);
   }
 
   async create(tenantId: string, branchId: string, data: any) {
@@ -173,7 +173,7 @@ export class MembersService {
     if (member.phone) {
       await this.createLoginIfMissing(tenantId, branchId, member.id, member.name, member.phone);
     }
-    return this.findOne(tenantId, member.id);
+    return this.findOne(tenantId, branchId, member.id);
   }
 
   // e.g. "AKR-2214" — first 3 letters of the tenant slug + a running count of
@@ -196,9 +196,9 @@ export class MembersService {
     return `${prefix}-${String(lastNum + 1).padStart(4, '0')}`;
   }
 
-  async update(tenantId: string, id: string, data: any) {
+  async update(tenantId: string, branchId: string, id: string, data: any) {
     assertValidPhone(data.phone);
-    const existing = await this.findOne(tenantId, id); // ensures tenant ownership before mutating
+    const existing = await this.findOne(tenantId, branchId, id); // ensures tenant+branch ownership before mutating
     // A renewal (expiresAt pushed forward) starts a fresh reminder cycle —
     // otherwise the member would never get reminded again next time they're due.
     if (data.expiresAt && new Date(data.expiresAt).getTime() !== existing.expiresAt.getTime()) {
@@ -208,16 +208,16 @@ export class MembersService {
     if (member.phone && !existing.user) {
       await this.createLoginIfMissing(tenantId, existing.branchId, member.id, member.name, member.phone);
     }
-    return this.findOne(tenantId, id);
+    return this.findOne(tenantId, branchId, id);
   }
 
-  async resetLoginPassword(tenantId: string, memberId: string, newPassword: string) {
+  async resetLoginPassword(tenantId: string, branchId: string, memberId: string, newPassword: string) {
     if (!newPassword || newPassword.length < 6) {
       throw new BadRequestException('Password must be at least 6 characters');
     }
 
     const member = await this.prisma.member.findFirst({
-      where: { id: memberId, tenantId },
+      where: { id: memberId, tenantId, branchId },
       include: { user: true },
     });
     if (!member) throw new NotFoundException('Member not found');
@@ -330,8 +330,8 @@ export class MembersService {
     return { created, failed: errors.length, errors };
   }
 
-  async remove(tenantId: string, id: string) {
-    await this.findOne(tenantId, id); // ensures tenant ownership before mutating
+  async remove(tenantId: string, branchId: string, id: string) {
+    await this.findOne(tenantId, branchId, id); // ensures tenant+branch ownership before mutating
 
     // Free up any seat and clear payment history first — both have a
     // required/unique FK to Member and would otherwise block the delete.

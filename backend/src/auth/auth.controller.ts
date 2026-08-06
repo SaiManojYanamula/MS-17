@@ -41,6 +41,10 @@ export class AuthController {
       memberId?: string;
     },
   ) {
+    // Primary branch defaults to the first of the given branchIds (falls
+    // back to the caller's own branch, unchanged, if none were given).
+    const primaryBranchId = body.branchId ?? body.branchIds?.[0] ?? req.branchId;
+
     if (body.role === 'STUDENT') {
       if (!body.memberId) {
         throw new ForbiddenException('memberId is required to create a student login');
@@ -48,8 +52,8 @@ export class AuthController {
       if (!['TENANT_OWNER', 'BRANCH_MANAGER', 'STAFF'].includes(req.role!)) {
         throw new ForbiddenException(`Role '${req.role}' cannot create student logins`);
       }
-      // Throws NotFoundException if the member doesn't exist or belongs to another tenant.
-      await this.membersService.findOne(req.tenantId!, body.memberId);
+      // Throws NotFoundException if the member doesn't exist or belongs to another tenant/branch.
+      await this.membersService.findOne(req.tenantId!, primaryBranchId!, body.memberId);
     } else if (req.role !== 'TENANT_OWNER') {
       throw new ForbiddenException(`Role '${req.role}' is not permitted to perform this action`);
     } else if (!['TENANT_OWNER', 'BRANCH_MANAGER', 'STAFF'].includes(body.role)) {
@@ -58,10 +62,6 @@ export class AuthController {
       // through the /super-admin API.
       throw new ForbiddenException(`Cannot create an account with role '${body.role}'`);
     }
-
-    // Primary branch defaults to the first of the given branchIds (falls
-    // back to the caller's own branch, unchanged, if none were given).
-    const primaryBranchId = body.branchId ?? body.branchIds?.[0] ?? req.branchId;
 
     return this.authService.register({
       tenantId: req.tenantId!,

@@ -170,9 +170,9 @@ export class SeatingService {
     return zones;
   }
 
-  async getSeatDetail(tenantId: string, seatId: string) {
+  async getSeatDetail(tenantId: string, branchId: string, seatId: string) {
     const seat = await this.prisma.seat.findFirst({
-      where: { id: seatId, tenantId },
+      where: { id: seatId, tenantId, branchId },
       include: { member: true, zone: true },
     });
 
@@ -183,8 +183,8 @@ export class SeatingService {
   // Assign / reassign a member to a seat. Editing an occupied seat to a
   // different member frees whatever other seat that member currently holds
   // first, so the Seat.memberId unique constraint never trips.
-  async assignSeat(tenantId: string, seatId: string, memberId: string) {
-    const seat = await this.prisma.seat.findFirst({ where: { id: seatId, tenantId } });
+  async assignSeat(tenantId: string, branchId: string, seatId: string, memberId: string) {
+    const seat = await this.prisma.seat.findFirst({ where: { id: seatId, tenantId, branchId } });
     if (!seat) throw new NotFoundException('Seat not found');
 
     // The target seat already belongs to someone else — overwriting its
@@ -215,8 +215,8 @@ export class SeatingService {
     return this.prisma.seat.findFirst({ where: { id: seatId }, include: { member: true, zone: true } });
   }
 
-  async releaseSeat(tenantId: string, seatId: string) {
-    const seat = await this.prisma.seat.findFirst({ where: { id: seatId, tenantId } });
+  async releaseSeat(tenantId: string, branchId: string, seatId: string) {
+    const seat = await this.prisma.seat.findFirst({ where: { id: seatId, tenantId, branchId } });
     if (!seat) throw new NotFoundException('Seat not found');
 
     return this.prisma.seat.update({
@@ -225,8 +225,8 @@ export class SeatingService {
     });
   }
 
-  async deleteSeat(tenantId: string, seatId: string) {
-    const seat = await this.prisma.seat.findFirst({ where: { id: seatId, tenantId } });
+  async deleteSeat(tenantId: string, branchId: string, seatId: string) {
+    const seat = await this.prisma.seat.findFirst({ where: { id: seatId, tenantId, branchId } });
     if (!seat) throw new NotFoundException('Seat not found');
     if (seat.memberId) {
       throw new BadRequestException('Release this seat before deleting it');

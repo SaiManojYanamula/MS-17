@@ -147,8 +147,8 @@ export class PaymentsService {
     return this.prisma.payment.create({ data: { ...data, tenantId, branchId } });
   }
 
-  async refund(tenantId: string, id: string) {
-    const payment = await this.prisma.payment.findFirst({ where: { id, tenantId } });
+  async refund(tenantId: string, branchId: string, id: string) {
+    const payment = await this.prisma.payment.findFirst({ where: { id, tenantId, branchId } });
     if (!payment) throw new NotFoundException('Payment not found');
 
     return this.prisma.payment.update({

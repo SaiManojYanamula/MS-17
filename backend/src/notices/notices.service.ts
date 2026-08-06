@@ -5,9 +5,9 @@ import { PrismaService } from '../prisma.service';
 export class NoticesService {
   constructor(private prisma: PrismaService) {}
 
-  async findAll(tenantId: string) {
+  async findAll(tenantId: string, branchId: string) {
     return this.prisma.notice.findMany({
-      where: { tenantId },
+      where: { tenantId, branchId },
       orderBy: { createdAt: 'desc' },
     });
   }
@@ -34,10 +34,11 @@ export class NoticesService {
 
   async update(
     tenantId: string,
+    branchId: string,
     id: string,
     data: { title?: string; body?: string; startDate?: string; endDate?: string },
   ) {
-    const existing = await this.prisma.notice.findFirst({ where: { id, tenantId } });
+    const existing = await this.prisma.notice.findFirst({ where: { id, tenantId, branchId } });
     if (!existing) throw new NotFoundException('Notice not found');
 
     // Empty string means "clear this date"; undefined means "leave as-is".
@@ -61,8 +62,8 @@ export class NoticesService {
     });
   }
 
-  async remove(tenantId: string, id: string) {
-    await this.prisma.notice.deleteMany({ where: { id, tenantId } });
+  async remove(tenantId: string, branchId: string, id: string) {
+    await this.prisma.notice.deleteMany({ where: { id, tenantId, branchId } });
     return { success: true };
   }
 }

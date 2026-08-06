@@ -65,7 +65,7 @@ export class ExpensesController {
     @UploadedFile() receipt?: Express.Multer.File,
   ) {
     const receiptUrl = await this.uploadReceipt(receipt);
-    return this.expensesService.update(req.tenantId!, id, {
+    return this.expensesService.update(req.tenantId!, req.branchId!, id, {
       category: body.category,
       amount: body.amount !== undefined ? Number(body.amount) : undefined,
       note: body.note,

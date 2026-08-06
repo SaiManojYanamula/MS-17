@@ -25,8 +25,8 @@ export class ApplicationsService {
 
   // Approving an application converts it into a real Member record.
   // Seat assignment happens separately from the Seating module.
-  async approve(tenantId: string, id: string) {
-    const application = await this.prisma.application.findFirst({ where: { id, tenantId } });
+  async approve(tenantId: string, branchId: string, id: string) {
+    const application = await this.prisma.application.findFirst({ where: { id, tenantId, branchId } });
     if (!application) throw new NotFoundException('Application not found');
     if (application.status !== 'PENDING') {
       throw new BadRequestException('Application already processed');
@@ -54,8 +54,8 @@ export class ApplicationsService {
     return member;
   }
 
-  async reject(tenantId: string, id: string) {
-    const application = await this.prisma.application.findFirst({ where: { id, tenantId } });
+  async reject(tenantId: string, branchId: string, id: string) {
+    const application = await this.prisma.application.findFirst({ where: { id, tenantId, branchId } });
     if (!application) throw new NotFoundException('Application not found');
 
     return this.prisma.application.update({ where: { id }, data: { status: 'REJECTED' } });

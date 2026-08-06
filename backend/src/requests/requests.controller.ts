@@ -92,12 +92,12 @@ export class RequestsController {
   @Get()
   @Roles('TENANT_OWNER', 'BRANCH_MANAGER', 'STAFF')
   findAll(@Req() req: TenantRequest) {
-    return this.requestsService.findAll(req.tenantId!);
+    return this.requestsService.findAll(req.tenantId!, req.branchId!);
   }
 
   @Patch(':id/resolve')
   @Roles('TENANT_OWNER', 'BRANCH_MANAGER', 'STAFF')
   resolve(@Req() req: TenantRequest, @Param('id') id: string) {
-    return this.requestsService.resolve(req.tenantId!, id);
+    return this.requestsService.resolve(req.tenantId!, req.branchId!, id);
   }
 }

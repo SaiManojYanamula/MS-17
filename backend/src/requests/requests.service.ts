@@ -28,9 +28,9 @@ export class RequestsService {
     });
   }
 
-  async findAll(tenantId: string) {
+  async findAll(tenantId: string, branchId: string) {
     return this.prisma.request.findMany({
-      where: { tenantId },
+      where: { tenantId, branchId },
       include: { member: { select: { id: true, name: true } } },
       orderBy: { createdAt: 'desc' },
     });
@@ -62,8 +62,11 @@ export class RequestsService {
     });
   }
 
-  async resolve(tenantId: string, id: string) {
-    const request = await this.prisma.request.findFirst({ where: { id, tenantId }, include: { member: true } });
+  async resolve(tenantId: string, branchId: string, id: string) {
+    const request = await this.prisma.request.findFirst({
+      where: { id, tenantId, branchId },
+      include: { member: true },
+    });
     if (!request) throw new NotFoundException('Request not found');
 
     // A request with a claimed amount is a self-reported payment — resolving
@@ -73,7 +76,7 @@ export class RequestsService {
     // (renewal + optional seat change together) does both in one resolve.
     if (request.amount) {
       const newExpiry = this.membersService.computeRenewalExpiry(request.member.plan, request.member.expiresAt);
-      await this.membersService.update(tenantId, request.memberId, { expiresAt: newExpiry });
+      await this.membersService.update(tenantId, branchId, request.memberId, { expiresAt: newExpiry });
       await this.prisma.payment.create({
         data: {
           tenantId,
@@ -99,7 +102,7 @@ export class RequestsService {
         where: { tenantId, branchId: request.branchId, seatNumber: request.requestedSeatNumber },
       });
       if (seat && seat.status === 'FREE') {
-        await this.seatingService.assignSeat(tenantId, seat.id, request.memberId);
+        await this.seatingService.assignSeat(tenantId, branchId, seat.id, request.memberId);
       } else {
         seatChangeNote = `Seat ${request.requestedSeatNumber} is no longer free — reassign manually from Seating.`;
       }

@@ -99,7 +99,7 @@ export class SeatingController {
   @Get(':seatId')
   @Roles('TENANT_OWNER', 'BRANCH_MANAGER', 'STAFF')
   getSeatDetail(@Req() req: TenantRequest, @Param('seatId') seatId: string) {
-    return this.seatingService.getSeatDetail(req.tenantId!, seatId);
+    return this.seatingService.getSeatDetail(req.tenantId!, req.branchId!, seatId);
   }
 
   @Patch(':seatId/assign')
@@ -109,18 +109,18 @@ export class SeatingController {
     @Param('seatId') seatId: string,
     @Body('memberId') memberId: string,
   ) {
-    return this.seatingService.assignSeat(req.tenantId!, seatId, memberId);
+    return this.seatingService.assignSeat(req.tenantId!, req.branchId!, seatId, memberId);
   }
 
   @Patch(':seatId/release')
   @Roles('TENANT_OWNER', 'BRANCH_MANAGER', 'STAFF')
   releaseSeat(@Req() req: TenantRequest, @Param('seatId') seatId: string) {
-    return this.seatingService.releaseSeat(req.tenantId!, seatId);
+    return this.seatingService.releaseSeat(req.tenantId!, req.branchId!, seatId);
   }
 
   @Delete(':seatId')
   @Roles('TENANT_OWNER', 'BRANCH_MANAGER')
   deleteSeat(@Req() req: TenantRequest, @Param('seatId') seatId: string) {
-    return this.seatingService.deleteSeat(req.tenantId!, seatId);
+    return this.seatingService.deleteSeat(req.tenantId!, req.branchId!, seatId);
   }
 }

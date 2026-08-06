@@ -45,10 +45,11 @@ export class ExpensesService {
 
   async update(
     tenantId: string,
+    branchId: string,
     id: string,
     data: { category?: string; amount?: number; note?: string; receiptUrl?: string },
   ) {
-    const existing = await this.prisma.expense.findFirst({ where: { id, tenantId } });
+    const existing = await this.prisma.expense.findFirst({ where: { id, tenantId, branchId } });
     if (!existing) throw new NotFoundException('Expense not found');
     return this.prisma.expense.update({ where: { id }, data });
   }
