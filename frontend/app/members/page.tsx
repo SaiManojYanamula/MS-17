@@ -27,7 +27,13 @@ export default function MembersPage() {
   const canDelete = hasRole('TENANT_OWNER', 'BRANCH_MANAGER');
   const canImport = hasRole('TENANT_OWNER', 'BRANCH_MANAGER');
   const [filter, setFilter] = useState<'all' | 'active' | 'expiring' | 'expired'>('all');
+  // const [search, setSearch] = useState('');
   const [search, setSearch] = useState('');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+  const [appliedFromDate, setAppliedFromDate] = useState('');
+  const [appliedToDate, setAppliedToDate] = useState('');
+
   const [members, setMembers] = useState<any[]>([]);
   const [counts, setCounts] = useState(EMPTY_COUNTS);
   const [showAdd, setShowAdd] = useState(false);
@@ -38,9 +44,35 @@ export default function MembersPage() {
   const [view, setView] = useState<'grid' | 'table'>('table');
   const highlightId = useSearchParams().get('highlight');
 
+  // const refetch = () => {
+  //   api
+  //     .members(filter === 'all' ? undefined : filter, search || undefined)
+  //     .then((res) => {
+  //       setMembers(res.members ?? []);
+  //       setCounts(res.counts ?? EMPTY_COUNTS);
+  //     })
+  //     .catch(() => {});
+  // };
+
+  // useEffect(() => {
+  //   const t = setTimeout(refetch, 300); // debounce search-as-you-type
+  //   return () => clearTimeout(t);
+  // }, [filter, search]);
+
+  const applyDateRange = () => {
+    setAppliedFromDate(fromDate);
+    setAppliedToDate(toDate);
+  };
+  const clearDateRange = () => {
+    setFromDate('');
+    setToDate('');
+    setAppliedFromDate('');
+    setAppliedToDate('');
+  };
+
   const refetch = () => {
     api
-      .members(filter === 'all' ? undefined : filter, search || undefined)
+      .members(filter === 'all' ? undefined : filter, search || undefined, appliedFromDate || undefined, appliedToDate || undefined)
       .then((res) => {
         setMembers(res.members ?? []);
         setCounts(res.counts ?? EMPTY_COUNTS);
@@ -51,7 +83,7 @@ export default function MembersPage() {
   useEffect(() => {
     const t = setTimeout(refetch, 300); // debounce search-as-you-type
     return () => clearTimeout(t);
-  }, [filter, search]);
+  }, [filter, search, appliedFromDate, appliedToDate]);
 
   const exportCsv = () => {
     downloadCsv(
@@ -89,12 +121,40 @@ export default function MembersPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <div>
           <h1 className="text-2xl font-serif font-semibold">Members</h1>
-          <p className="text-sm text-gray-500">
+          {/* <p className="text-sm text-gray-500">
             {counts.all} active members across {new Set(members.map((m: any) => m.batch)).size || 0} batches
+          </p> */}
+          <p className="text-sm text-gray-500">
+            {counts.active} active members across {new Set(members.map((m: any) => m.batch)).size || 0} batches
           </p>
         </div>
-        <div className="flex items-center gap-3">
+<div className="flex items-center gap-3">
           <TopBar value={search} onChange={setSearch} />
+          <input
+            type="date"
+            value={fromDate}
+            onChange={(e) => setFromDate(e.target.value)}
+            className="border border-black/10 rounded-lg px-2 py-2 text-sm shrink-0"
+          />
+          <input
+            type="date"
+            value={toDate}
+            onChange={(e) => setToDate(e.target.value)}
+            min={fromDate || undefined}
+            className="border border-black/10 rounded-lg px-2 py-2 text-sm shrink-0"
+          />
+          <button
+            onClick={applyDateRange}
+            disabled={!fromDate || !toDate}
+            className="bg-sidebar text-white text-sm px-3 py-2 rounded-lg shrink-0 disabled:opacity-40"
+          >
+            Apply
+          </button>
+          {(appliedFromDate || appliedToDate) && (
+            <button onClick={clearDateRange} className="text-xs text-gray-400 underline shrink-0">
+              Clear
+            </button>
+          )}
           <div className="flex items-center border border-black/10 rounded-lg overflow-hidden shrink-0 text-sm">
             <button
               onClick={() => setView('grid')}
@@ -165,6 +225,9 @@ export default function MembersPage() {
                 <th className="font-normal">PLAN</th>
                 <th className="font-normal">BATCH</th>
                 <th className="font-normal">SEAT</th>
+                 <th className="font-normal">SEAT</th>
+                <th className="font-normal">JOINED</th>
+                {/* <th className="font-normal">EXPIRES</th> */}
                 <th className="font-normal">EXPIRES</th>
                 <th className="font-normal">STATUS</th>
                 <th className="font-normal">PORTAL</th>
@@ -191,7 +254,10 @@ export default function MembersPage() {
                   <td>{m.phone || '—'}</td>
                   <td>{formatPlan(m.plan)}</td>
                   <td>{m.batch}</td>
-                  <td>#{seatNumberOf(m.seat)}</td>
+                  {/* <td>#{seatNumberOf(m.seat)}</td>
+                  <td>{formatDate(m.expiresAt)}</td> */}
+                    <td>#{seatNumberOf(m.seat)}</td>
+                  <td>{formatDate(m.joinedAt)}</td>
                   <td>{formatDate(m.expiresAt)}</td>
                   <td>
                     <StatusPill status={m.status} />
@@ -235,7 +301,8 @@ export default function MembersPage() {
               ))}
               {members.length === 0 && (
                 <tr>
-                  <td colSpan={9} className="p-8 text-center text-gray-400">
+                  {/* <td colSpan={9} className="p-8 text-center text-gray-400"> */}
+                  <td colSpan={10} className="p-8 text-center text-gray-400">
                     No members match.
                   </td>
                 </tr>

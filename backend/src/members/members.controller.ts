@@ -22,16 +22,27 @@ import { Roles } from '../common/decorators/roles.decorator';
 export class MembersController {
   constructor(private membersService: MembersService) {}
 
+  // @Get()
+  // @Roles('TENANT_OWNER', 'BRANCH_MANAGER', 'STAFF')
+  // findAll(
+  //   @Req() req: TenantRequest,
+  //   @Query('filter') filter?: 'active' | 'expiring' | 'expired',
+  //   @Query('search') search?: string,
+  // ) {
+  //   return this.membersService.findAll(req.tenantId!, req.branchId!, filter, search);
+  // }
+
   @Get()
   @Roles('TENANT_OWNER', 'BRANCH_MANAGER', 'STAFF')
   findAll(
     @Req() req: TenantRequest,
     @Query('filter') filter?: 'active' | 'expiring' | 'expired',
     @Query('search') search?: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
   ) {
-    return this.membersService.findAll(req.tenantId!, req.branchId!, filter, search);
+    return this.membersService.findAll(req.tenantId!, req.branchId!, filter, search, from, to);
   }
-
   // Student self-service — must come before ':id' or it'd be swallowed as an id param.
   @Get('me')
   findMine(@Req() req: TenantRequest) {
