@@ -284,7 +284,16 @@ export default function PaymentsPage() {
                       </td>
                       <td className="text-gray-500">#{seatNumberOf(t.member?.seat)}</td>
                       <td className="text-gray-500">{t.fee != null ? `₹${t.fee}` : '—'}</td>
-                      <td>₹{t.amount}</td>
+                      <td>
+                        {t.status === 'REFUNDED' ? (
+                          <>
+                            <span className="line-through text-gray-400">₹{t.amount}</span>
+                            <span className="block text-[11px] text-expiring">refunded — doesn't count</span>
+                          </>
+                        ) : (
+                          `₹${t.amount}`
+                        )}
+                      </td>
                       <td>
                         {t.due != null ? (
                           t.due > 0 ? (
