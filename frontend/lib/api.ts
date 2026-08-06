@@ -35,6 +35,17 @@ async function request(path: string, options: RequestInit = {}) {
   });
 
   if (!res.ok) {
+    // A 401 here means the token itself is no good anymore — invalid,
+    // expired, or invalidated by a password reset (tokenVersion mismatch,
+    // see tenant.middleware.ts). The backend rejecting the request doesn't
+    // by itself change what's on screen, so force back to login rather than
+    // leaving a dead session sitting in a UI that looks logged in.
+    if (res.status === 401 && typeof window !== 'undefined' && window.location.pathname !== '/login') {
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('user');
+      localStorage.removeItem('activeBranchId');
+      window.location.href = '/login';
+    }
     const body = await res.json().catch(() => ({}));
     throw new Error(body.message || `Request failed: ${res.status}`);
   }
