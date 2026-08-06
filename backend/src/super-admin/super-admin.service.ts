@@ -33,7 +33,7 @@ export class SuperAdminService {
 
     const tenant = await this.prisma.tenant.create({ data: { name: data.name, slug: data.slug } });
     const branch = await this.prisma.branch.create({
-      data: { tenantId: tenant.id, name: data.branchName || 'Main Branch', address: data.branchAddress },
+      data: { tenantId: tenant.id, name: data.branchName || data.name, address: data.branchAddress },
     });
 
     try {
