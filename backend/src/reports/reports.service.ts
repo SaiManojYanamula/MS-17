@@ -9,10 +9,12 @@ export class ReportsService {
   async dashboardStats(tenantId: string, branchId: string) {
     const [activeMembers, totalSeats, occupiedSeats, pendingApplications, revenueThisMonth] =
       await Promise.all([
-        // "Active" = not expired and not within the 7-day expiring-soon window —
-        // derived from expiresAt, never from the stale stored status column.
+        // "Active" = currently holding a seat. Seat.memberId is unique, so
+        // this always matches occupiedSeats below by construction — no
+        // separate expiresAt-based definition to drift out of sync with
+        // what the Seating page shows as occupied.
         this.prisma.member.count({
-          where: { tenantId, branchId, expiresAt: { gt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) } },
+          where: { tenantId, branchId, seat: { isNot: null } },
         }),
         this.prisma.seat.count({ where: { tenantId, branchId } }),
         this.prisma.seat.count({ where: { tenantId, branchId, status: 'OCCUPIED' } }),
