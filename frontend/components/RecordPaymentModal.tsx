@@ -91,7 +91,6 @@ export default function RecordPaymentModal({
                 <option value="UPI">UPI</option>
                 <option value="CASH">Cash</option>
                 <option value="CARD">Card</option>
-                <option value="PENDING">Pending</option>
               </select>
             </div>
           </div>

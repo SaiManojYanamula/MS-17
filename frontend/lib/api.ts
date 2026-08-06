@@ -165,6 +165,7 @@ export const api = {
 
   payments: (status?: string) => request(`/payments${status ? `?status=${status}` : ''}`),
   paymentsSummary: () => request('/payments/summary'),
+  pendingMembers: () => request('/payments/pending-members'),
   createPayment: (data: {
     memberId: string;
     amount: number;

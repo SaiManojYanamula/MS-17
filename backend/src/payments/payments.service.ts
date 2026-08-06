@@ -80,27 +80,22 @@ export class PaymentsService {
     });
   }
 
-  async summary(tenantId: string, branchId: string) {
+  // Shared by summary() (sums the due) and pendingMembers() (lists who owes
+  // it) — one member-level fee-vs-paid computation instead of duplicating
+  // the cycle-window logic across both.
+  private async computeDuePerMember(tenantId: string, branchId: string) {
     const now = new Date();
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-
-    const [collectedAgg, txCount, tenant, members] = await Promise.all([
-      this.prisma.payment.aggregate({
-        where: { tenantId, branchId, status: 'PAID', createdAt: { gte: monthStart } },
-        _sum: { amount: true },
-      }),
-      this.prisma.payment.count({
-        where: { tenantId, branchId, status: 'PAID', createdAt: { gte: monthStart } },
+    const [members, tenant] = await Promise.all([
+      this.prisma.member.findMany({
+        where: { tenantId, branchId },
+        include: { seat: true },
       }),
       this.prisma.tenant.findUnique({
         where: { id: tenantId },
         select: { monthlyFee: true, quarterlyFee: true, yearlyFee: true, dailyPassFee: true },
       }),
-      this.prisma.member.findMany({
-        where: { tenantId, branchId },
-        select: { id: true, plan: true, expiresAt: true },
-      }),
     ]);
+    if (!members.length) return [];
 
     const feeByPlan: Record<string, number | null | undefined> = {
       MONTHLY: tenant?.monthlyFee,
@@ -109,28 +104,46 @@ export class PaymentsService {
       DAILY_PASS: tenant?.dailyPassFee,
     };
 
+    const memberIds = members.map((m) => m.id);
+    const allPaid = await this.prisma.payment.findMany({
+      where: { tenantId, memberId: { in: memberIds }, status: 'PAID' },
+      select: { memberId: true, amount: true, createdAt: true },
+    });
+
+    return members
+      .map((member) => {
+        const fee = feeByPlan[member.plan];
+        if (fee == null) return null;
+        const start = cycleStart(member.plan, member.expiresAt, now);
+        const paid = allPaid
+          .filter((x) => x.memberId === member.id && x.createdAt >= start)
+          .reduce((sum, x) => sum + x.amount, 0);
+        return { member, fee, paid, due: Math.max(fee - paid, 0) };
+      })
+      .filter((x): x is NonNullable<typeof x> => x !== null);
+  }
+
+  async summary(tenantId: string, branchId: string) {
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const [collectedAgg, txCount, duePerMember] = await Promise.all([
+      this.prisma.payment.aggregate({
+        where: { tenantId, branchId, status: 'PAID', createdAt: { gte: monthStart } },
+        _sum: { amount: true },
+      }),
+      this.prisma.payment.count({
+        where: { tenantId, branchId, status: 'PAID', createdAt: { gte: monthStart } },
+      }),
+      this.computeDuePerMember(tenantId, branchId),
+    ]);
+
     // "Pending Dues" has to reflect the same fee-vs-paid shortfall the
     // Payments table shows per member — no payment in this app is ever
     // actually created with status PENDING, so summing that status here
     // (the previous approach) always came out ₹0 regardless of what the
     // table showed.
-    let pending = 0;
-    if (members.length) {
-      const memberIds = members.map((m) => m.id);
-      const allPaid = await this.prisma.payment.findMany({
-        where: { tenantId, memberId: { in: memberIds }, status: 'PAID' },
-        select: { memberId: true, amount: true, createdAt: true },
-      });
-      for (const m of members) {
-        const fee = feeByPlan[m.plan];
-        if (fee == null) continue;
-        const start = cycleStart(m.plan, m.expiresAt, now);
-        const totalPaid = allPaid
-          .filter((x) => x.memberId === m.id && x.createdAt >= start)
-          .reduce((sum, x) => sum + x.amount, 0);
-        pending += Math.max(fee - totalPaid, 0);
-      }
-    }
+    const pending = duePerMember.reduce((sum, x) => sum + x.due, 0);
 
     const collected = collectedAgg._sum.amount ?? 0;
     const avg = txCount > 0 ? Math.round(collected / txCount) : 0;
@@ -141,6 +154,27 @@ export class PaymentsService {
       transactions: txCount,
       avgTransaction: avg,
     };
+  }
+
+  // Powers the Payments page's "Pending" tab — members who currently owe
+  // money, not payment transactions (nothing in this app ever creates a
+  // Payment row with status PENDING, so filtering payments by that status
+  // was always an empty list regardless of what members actually owed).
+  async pendingMembers(tenantId: string, branchId: string) {
+    const duePerMember = await this.computeDuePerMember(tenantId, branchId);
+    return duePerMember
+      .filter((x) => x.due > 0)
+      .map((x) => ({
+        memberId: x.member.id,
+        name: x.member.name,
+        phone: x.member.phone,
+        plan: x.member.plan,
+        seat: x.member.seat,
+        fee: x.fee,
+        paid: x.paid,
+        due: x.due,
+      }))
+      .sort((a, b) => b.due - a.due);
   }
 
   async create(tenantId: string, branchId: string, data: any) {

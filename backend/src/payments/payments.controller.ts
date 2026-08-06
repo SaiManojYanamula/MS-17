@@ -34,6 +34,12 @@ export class PaymentsController {
     return this.paymentsService.summary(req.tenantId!, req.branchId!);
   }
 
+  @Get('pending-members')
+  @Roles('TENANT_OWNER', 'BRANCH_MANAGER', 'STAFF')
+  pendingMembers(@Req() req: TenantRequest) {
+    return this.paymentsService.pendingMembers(req.tenantId!, req.branchId!);
+  }
+
   @Post()
   @Roles('TENANT_OWNER', 'BRANCH_MANAGER', 'STAFF')
   @UseInterceptors(screenshotUpload)

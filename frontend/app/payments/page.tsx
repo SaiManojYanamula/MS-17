@@ -13,7 +13,6 @@ const tabs = ['All Transactions', 'Paid', 'Pending', 'Refunded'];
 const statusMap: Record<string, string | undefined> = {
   'All Transactions': undefined,
   Paid: 'PAID',
-  Pending: 'PENDING',
   Refunded: 'REFUNDED',
 };
 
@@ -24,6 +23,7 @@ export default function PaymentsPage() {
   const [tab, setTab] = useState('All Transactions');
   const [summary, setSummary] = useState(EMPTY_SUMMARY);
   const [transactions, setTransactions] = useState<any[]>([]);
+  const [pendingMembers, setPendingMembers] = useState<any[]>([]);
   const [showRecord, setShowRecord] = useState(false);
   const [error, setError] = useState('');
   const [refundingId, setRefundingId] = useState<string | null>(null);
@@ -35,7 +35,11 @@ export default function PaymentsPage() {
 
   const refetch = () => {
     api.paymentsSummary().then(setSummary).catch(() => {});
-    api.payments(statusMap[tab]).then(setTransactions).catch(() => {});
+    if (tab === 'Pending') {
+      api.pendingMembers().then(setPendingMembers).catch(() => {});
+    } else {
+      api.payments(statusMap[tab]).then(setTransactions).catch(() => {});
+    }
   };
 
   useEffect(() => {
@@ -55,6 +59,21 @@ export default function PaymentsPage() {
   const hasDateFilter = !!(appliedFromDate || appliedToDate);
 
   const exportCsv = () => {
+    if (tab === 'Pending') {
+      downloadCsv(
+        `payments-pending-${new Date().toISOString().slice(0, 10)}.csv`,
+        [
+          { header: 'Member', key: 'name' },
+          { header: 'Phone', key: 'phone' },
+          { header: 'Seat', key: 'seatNumber' },
+          { header: 'Plan Fee', key: 'fee' },
+          { header: 'Paid So Far', key: 'paid' },
+          { header: 'Due', key: 'due' },
+        ],
+        pendingMembers.map((m: any) => ({ ...m, seatNumber: seatNumberOf(m.seat) })),
+      );
+      return;
+    }
     downloadCsv(
       `payments-${tab.toLowerCase().replace(/\s+/g, '-')}-${new Date().toISOString().slice(0, 10)}.csv`,
       [
@@ -94,6 +113,12 @@ export default function PaymentsPage() {
   const periodPaid = filteredTransactions
     .filter((t: any) => t.status === 'PAID')
     .reduce((sum: number, t: any) => sum + t.amount, 0);
+
+  const filteredPendingMembers = pendingMembers.filter((m: any) => {
+    if (!search.trim()) return true;
+    const q = search.trim().toLowerCase();
+    return (m.name ?? '').toLowerCase().includes(q) || (m.phone ?? '').includes(q);
+  });
 
   // Transactions arrive newest-first from the API, so grouping while
   // iterating in that order (via a Map, not a plain object — object keys
@@ -174,6 +199,7 @@ export default function PaymentsPage() {
         </div>
       </div>
 
+      {tab !== 'Pending' && (
       <div className="bg-card rounded-xl p-4 border border-black/5 mb-6 flex flex-wrap items-end gap-3">
         <div>
           <label className="block text-xs text-gray-500 mb-1">From</label>
@@ -214,6 +240,7 @@ export default function PaymentsPage() {
           </div>
         )}
       </div>
+      )}
 
       <div className="flex gap-6 border-b border-black/10 mb-4 text-sm overflow-x-auto">
         {tabs.map((t) => (
@@ -229,6 +256,58 @@ export default function PaymentsPage() {
 
       {error && <p className="text-xs text-expiring mb-3">{error}</p>}
 
+      {tab === 'Pending' ? (
+      <div className="bg-card rounded-xl border border-black/5 overflow-x-auto">
+        <table className="w-full text-sm min-w-[600px]">
+          <thead>
+            <tr className="text-left text-[10px] text-gray-400 tracking-wide border-b border-black/5">
+              <th className="p-4 font-normal">MEMBER</th>
+              <th className="font-normal">SEAT</th>
+              <th className="font-normal">PLAN FEE</th>
+              <th className="font-normal">PAID SO FAR</th>
+              <th className="font-normal">DUE</th>
+              <th className="font-normal" />
+            </tr>
+          </thead>
+          <tbody>
+            {filteredPendingMembers.length === 0 && (
+              <tr>
+                <td colSpan={6} className="p-8 text-center text-gray-400">
+                  Nobody owes anything right now 🎉
+                </td>
+              </tr>
+            )}
+            {filteredPendingMembers.map((m: any) => (
+              <tr key={m.memberId} className="border-b border-black/5 last:border-0">
+                <td className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-sidebar text-white flex items-center justify-center text-xs">
+                      {(m.name ?? '').split(' ').map((p: string) => p[0]).join('')}
+                    </div>
+                    <div>
+                      <div className="font-medium">{m.name}</div>
+                      <div className="text-xs text-gray-400">{m.phone ?? '—'}</div>
+                    </div>
+                  </div>
+                </td>
+                <td className="text-gray-500">#{seatNumberOf(m.seat)}</td>
+                <td className="text-gray-500">₹{m.fee}</td>
+                <td className="text-gray-500">₹{m.paid}</td>
+                <td className="text-expiring font-medium">₹{m.due}</td>
+                <td className="p-4">
+                  <button
+                    onClick={() => setShowRecord(true)}
+                    className="text-xs text-accent font-medium"
+                  >
+                    Record Payment
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      ) : (
       <div className="bg-card rounded-xl border border-black/5 overflow-x-auto">
         <table className="w-full text-sm min-w-[800px]">
           <thead>
@@ -343,6 +422,7 @@ export default function PaymentsPage() {
           </tbody>
         </table>
       </div>
+      )}
 
       {showRecord && <RecordPaymentModal onClose={() => setShowRecord(false)} onSuccess={refetch} />}
     </div>
