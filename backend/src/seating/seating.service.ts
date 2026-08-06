@@ -60,11 +60,14 @@ export class SeatingService {
     return this.prisma.zone.findUnique({ where: { id: zone.id }, include: { seats: true } });
   }
 
-  // Adds `count` more seats to an existing zone, numbered right after the
-  // branch's actual highest seat number — not the zone's stored endSeat,
-  // which can go stale (e.g. deleting the zone's last seat leaves endSeat
-  // pointing at a number that no longer exists, which would silently
-  // re-create a "deleted" seat number instead of continuing forward).
+  // Adds `count` more seats to an existing zone. Prefers continuing right
+  // after this zone's own endSeat — deleteSeat() keeps endSeat accurate by
+  // renumbering the zone's later seats on every delete, so a zone that lost
+  // seats has a genuinely free gap right after it (e.g. Zone A 1-10 loses
+  // seat 1, renumbers to 1-9 — seat 10 is free and should be reused, not
+  // skipped). Only falls back to the branch's highest seat number + 1 when
+  // that immediate range is actually taken by another zone (e.g. zones
+  // packed with no gap between them), to avoid colliding with it.
   async addSeatsToZone(tenantId: string, branchId: string, zoneId: string, count: number) {
     if (!Number.isInteger(count) || count < 1) {
       throw new BadRequestException('Enter a valid number of seats to add');
@@ -78,12 +81,19 @@ export class SeatingService {
     const zone = await this.prisma.zone.findFirst({ where: { id: zoneId, tenantId, branchId } });
     if (!zone) throw new NotFoundException('Zone not found');
 
-    const highest = await this.prisma.seat.aggregate({
-      where: { branchId },
-      _max: { seatNumber: true },
+    let startSeat = zone.endSeat + 1;
+    let endSeat = startSeat + count - 1;
+    const overlap = await this.prisma.seat.findFirst({
+      where: { branchId, seatNumber: { gte: startSeat, lte: endSeat } },
     });
-    const startSeat = Math.max(highest._max.seatNumber ?? 0, zone.endSeat) + 1;
-    const endSeat = startSeat + count - 1;
+    if (overlap) {
+      const highest = await this.prisma.seat.aggregate({
+        where: { branchId },
+        _max: { seatNumber: true },
+      });
+      startSeat = Math.max(highest._max.seatNumber ?? 0, zone.endSeat) + 1;
+      endSeat = startSeat + count - 1;
+    }
 
     await this.prisma.$transaction([
       this.prisma.seat.createMany({
