@@ -142,7 +142,7 @@ export class NotificationsService {
     dueDate: string,
     tenantId?: string,
   ) {
-    return this.sendWhatsAppTemplate(phone, 'ee_due_reminder_v1', [memberName, plan, tenantName, dueDate], tenantId);
+    return this.sendWhatsAppTemplate(phone, 'fee_due_reminder_v1', [memberName, plan, tenantName, dueDate], tenantId);
   }
 
   // Approved template: "Hi {{1}}, we've received your payment of ₹{{2}} for
