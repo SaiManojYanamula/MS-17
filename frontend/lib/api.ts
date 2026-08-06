@@ -120,10 +120,12 @@ export const api = {
     return request('/public/book', { method: 'POST', body: formData });
   },
 
-  members: (filter?: string, search?: string) => {
+  members: (filter?: string, search?: string, from?: string, to?: string) => {
     const params = new URLSearchParams();
     if (filter) params.set('filter', filter);
     if (search) params.set('search', search);
+    if (from) params.set('from', from);
+    if (to) params.set('to', to);
     return request(`/members?${params.toString()}`);
   },
   createMember: (data: {
