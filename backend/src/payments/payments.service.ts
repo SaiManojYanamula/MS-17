@@ -64,14 +64,18 @@ export class PaymentsService {
 
     return payments.map((p) => {
       const fee = feeByPlan[p.member.plan];
-      if (fee == null) return { ...p, due: null };
+      if (fee == null) return { ...p, due: null, extra: null };
 
       const start = cycleStart(p.member.plan, p.member.expiresAt, now);
       const totalPaid = allPaidForMembers
         .filter((x) => x.memberId === p.memberId && x.createdAt >= start)
         .reduce((sum, x) => sum + x.amount, 0);
 
-      return { ...p, due: Math.max(fee - totalPaid, 0) };
+      return {
+        ...p,
+        due: Math.max(fee - totalPaid, 0),
+        extra: Math.max(totalPaid - fee, 0),
+      };
     });
   }
 

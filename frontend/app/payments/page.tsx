@@ -282,6 +282,8 @@ export default function PaymentsPage() {
                         {t.due != null ? (
                           t.due > 0 ? (
                             <span className="text-expiring font-medium">₹{t.due}</span>
+                          ) : t.extra > 0 ? (
+                            <span className="text-free">Fully Paid <span className="text-accent">(+₹{t.extra} extra)</span></span>
                           ) : (
                             <span className="text-free">Fully Paid</span>
                           )
