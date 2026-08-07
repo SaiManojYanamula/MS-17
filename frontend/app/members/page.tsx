@@ -179,7 +179,32 @@ export default function MembersPage() {
 
   
       </div>
-        {/* date range - own row now, won't overlap/overflow */}
+   
+      <div className="flex gap-6 border-b border-black/10 mb-6 text-sm overflow-x-auto">
+        {tabs.map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setFilter(t.key as any)}
+            className={`pb-3 flex items-center gap-2 transition-colors ${
+              filter === t.key
+                ? "border-b-2 border-accent text-accent font-medium"
+                : "text-gray-400 hover:text-gray-600"
+            }`}
+          >
+            {t.label}
+            <span
+              className={`rounded-full px-2 py-0.5 text-xs ${
+                filter === t.key
+                  ? "bg-accent/10 text-accent"
+                  : "bg-black/5 text-gray-500"
+              }`}
+            >
+              {counts[t.key as keyof typeof counts]}
+            </span>
+          </button>
+        ))}
+      </div>
+           {/* date range - own row now, won't overlap/overflow */}
     <div className="flex items-center gap-2 mb-6 flex-wrap">
       <div className="flex items-center border border-black/10 rounded-lg overflow-hidden shrink-0 text-sm">
         <input
@@ -212,30 +237,6 @@ export default function MembersPage() {
         </button>
       )}
     </div>
-      <div className="flex gap-6 border-b border-black/10 mb-6 text-sm overflow-x-auto">
-        {tabs.map((t) => (
-          <button
-            key={t.key}
-            onClick={() => setFilter(t.key as any)}
-            className={`pb-3 flex items-center gap-2 transition-colors ${
-              filter === t.key
-                ? "border-b-2 border-accent text-accent font-medium"
-                : "text-gray-400 hover:text-gray-600"
-            }`}
-          >
-            {t.label}
-            <span
-              className={`rounded-full px-2 py-0.5 text-xs ${
-                filter === t.key
-                  ? "bg-accent/10 text-accent"
-                  : "bg-black/5 text-gray-500"
-              }`}
-            >
-              {counts[t.key as keyof typeof counts]}
-            </span>
-          </button>
-        ))}
-      </div>
 
       {error && <p className="text-xs text-expiring mb-3">{error}</p>}
 
