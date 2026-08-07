@@ -4,10 +4,19 @@ import { useState } from 'react';
 import { api } from '@/lib/api';
 import { memberNameOf, formatDate } from '@/lib/format';
 
-// Same rough days-per-cycle approximation used in RecordPaymentModal — only
-// for suggesting a prorated refund amount, never for the member's actual
-// expiry math (that's exact, server-side, via addMonthsClamped).
-const PLAN_DAYS: Record<string, number> = { MONTHLY: 30, QUARTERLY: 91, YEARLY: 365, DAILY_PASS: 1 };
+// Mirrors payments.service.ts's cycleStart() exactly — walking back one
+// real calendar plan-length from expiresAt — so the total cycle length
+// respects actual month lengths (e.g. a 31-day August) instead of an
+// approximate flat "30 days" that would over-suggest a refund for time
+// already used.
+function cycleStart(plan: string, expiresAt: Date): Date {
+  const d = new Date(expiresAt);
+  if (plan === 'MONTHLY') d.setMonth(d.getMonth() - 1);
+  else if (plan === 'QUARTERLY') d.setMonth(d.getMonth() - 3);
+  else if (plan === 'YEARLY') d.setMonth(d.getMonth() - 12);
+  else d.setDate(d.getDate() - 1); // DAILY_PASS
+  return d;
+}
 
 export default function RefundModal({
   payment,
@@ -20,14 +29,14 @@ export default function RefundModal({
 }) {
   const member = payment.member;
   const expiresAt = member?.expiresAt ? new Date(member.expiresAt) : null;
-  const daysRemaining = expiresAt
-    ? Math.max(0, Math.ceil((expiresAt.getTime() - Date.now()) / (24 * 60 * 60 * 1000)))
-    : 0;
-  const totalPlanDays = member ? (PLAN_DAYS[member.plan] ?? 30) : 30;
-  // Prorated for unused days left on the plan — full refund if we can't
-  // tell (no expiry on record), never more than what was actually paid.
+  const start = member && expiresAt ? cycleStart(member.plan, expiresAt) : null;
+  const oneDayMs = 24 * 60 * 60 * 1000;
+  const daysRemaining = expiresAt ? Math.max(0, Math.ceil((expiresAt.getTime() - Date.now()) / oneDayMs)) : 0;
+  const totalCycleDays = start && expiresAt ? Math.max(1, Math.round((expiresAt.getTime() - start.getTime()) / oneDayMs)) : 30;
+  // Prorated for unused days left on the current cycle — full refund if we
+  // can't tell (no expiry on record), never more than what was actually paid.
   const suggested = expiresAt
-    ? Math.min(payment.amount, Math.max(0, Math.round((daysRemaining / totalPlanDays) * payment.amount)))
+    ? Math.min(payment.amount, Math.max(0, Math.round((daysRemaining / totalCycleDays) * payment.amount)))
     : payment.amount;
 
   const [amount, setAmount] = useState(String(suggested));
@@ -64,9 +73,8 @@ export default function RefundModal({
 
         {expiresAt && (
           <div className="bg-accent/5 border border-accent/10 rounded-lg p-3 mb-4 text-xs text-gray-600">
-            Plan expires {formatDate(member.expiresAt)} — about {daysRemaining} day{daysRemaining === 1 ? '' : 's'}{' '}
-            remaining of a ~{totalPlanDays}-day cycle. Suggested prorated refund:{' '}
-            <span className="font-semibold">₹{suggested}</span>.
+            Plan expires {formatDate(member.expiresAt)} — {daysRemaining} day{daysRemaining === 1 ? '' : 's'} remaining
+            of a {totalCycleDays}-day cycle. Suggested prorated refund: <span className="font-semibold">₹{suggested}</span>.
           </div>
         )}
 
