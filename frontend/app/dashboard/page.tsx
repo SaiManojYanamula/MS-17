@@ -162,7 +162,7 @@ export default function DashboardPage() {
        
         <StatCard
           icon="₹"
-          value={`₹${(stats.revenueThisMonth / 100000).toFixed(2)}L`}
+          value={`₹${stats.revenueThisMonth.toLocaleString('en-IN')}`}
           label="Revenue This Month"
           changePct={stats.revenueChangePct}
         />
