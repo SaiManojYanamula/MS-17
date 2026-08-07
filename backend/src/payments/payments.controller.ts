@@ -65,7 +65,7 @@ export class PaymentsController {
 
   @Patch(':id/refund')
   @Roles('TENANT_OWNER', 'BRANCH_MANAGER')
-  refund(@Req() req: TenantRequest, @Param('id') id: string) {
-    return this.paymentsService.refund(req.tenantId!, req.branchId!, id);
+  refund(@Req() req: TenantRequest, @Param('id') id: string, @Body('amount') amount?: number) {
+    return this.paymentsService.refund(req.tenantId!, req.branchId!, id, amount != null ? Number(amount) : undefined);
   }
 }

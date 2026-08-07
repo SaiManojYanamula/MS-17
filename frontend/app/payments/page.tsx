@@ -4,6 +4,7 @@ import { Fragment, useEffect, useState } from 'react';
 import TopBar from '@/components/TopBar';
 import StatusPill from '@/components/StatusPill';
 import RecordPaymentModal from '@/components/RecordPaymentModal';
+import RefundModal from '@/components/RefundModal';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { formatDate, memberNameOf, seatNumberOf, istDayStart, istDayEnd } from '@/lib/format';
@@ -46,7 +47,7 @@ export default function PaymentsPage() {
   const [pendingMembers, setPendingMembers] = useState<any[]>([]);
   const [showRecord, setShowRecord] = useState(false);
   const [error, setError] = useState('');
-  const [refundingId, setRefundingId] = useState<string | null>(null);
+  const [refundingPayment, setRefundingPayment] = useState<any>(null);
   const [search, setSearch] = useState('');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
@@ -154,26 +155,6 @@ export default function PaymentsPage() {
   const monthLabel = (key: string) => {
     const [y, m] = key.split('-').map(Number);
     return new Date(y, m - 1, 1).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
-  };
-
-  const refund = async (t: any) => {
-    if (!window.confirm(`Refund ₹${t.amount} paid by ${memberNameOf(t.member)}? This can't be undone.`)) {
-      return;
-    }
-    setError('');
-    const id = t.id;
-    const snapshot = transactions;
-    setTransactions((prev) => prev.map((x: any) => (x.id === id ? { ...x, status: 'REFUNDED' } : x)));
-    setRefundingId(id);
-    try {
-      await api.refundPayment(id);
-      api.paymentsSummary().then(setSummary).catch(() => {});
-    } catch (err: any) {
-      setTransactions(snapshot);
-      setError(err.message || "Couldn't refund — try again.");
-    } finally {
-      setRefundingId(null);
-    }
   };
 
   return (
@@ -416,7 +397,13 @@ export default function PaymentsPage() {
                         {t.status === 'REFUNDED' ? (
                           <>
                             <span className="line-through text-gray-400">₹{t.amount}</span>
-                            <span className="block text-[11px] text-expiring">refunded — doesn't count</span>
+                            {t.refundAmount != null && t.refundAmount < t.amount ? (
+                              <span className="block text-[11px] text-expiring">
+                                ₹{t.refundAmount} refunded — ₹{t.amount - t.refundAmount} still counts
+                              </span>
+                            ) : (
+                              <span className="block text-[11px] text-expiring">refunded — doesn't count</span>
+                            )}
                           </>
                         ) : (
                           `₹${t.amount}`
@@ -455,11 +442,10 @@ export default function PaymentsPage() {
                       <td className="p-4">
                         {hasRole('TENANT_OWNER', 'BRANCH_MANAGER') && t.status === 'PAID' && (
                           <button
-                            onClick={() => refund(t)}
-                            disabled={refundingId === t.id}
-                            className="text-xs text-expiring disabled:opacity-60"
+                            onClick={() => setRefundingPayment(t)}
+                            className="text-xs text-expiring"
                           >
-                            {refundingId === t.id ? 'Refunding…' : 'Refund'}
+                            Refund
                           </button>
                         )}
                       </td>
@@ -474,6 +460,13 @@ export default function PaymentsPage() {
       )}
 
       {showRecord && <RecordPaymentModal onClose={() => setShowRecord(false)} onSuccess={refetch} />}
+      {refundingPayment && (
+        <RefundModal
+          payment={refundingPayment}
+          onClose={() => setRefundingPayment(null)}
+          onSuccess={refetch}
+        />
+      )}
     </div>
   );
 }

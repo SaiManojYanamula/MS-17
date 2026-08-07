@@ -278,6 +278,7 @@ model Payment {
   status    PaymentStatus @default(PENDING)
   label     String // e.g. "Monthly Renewal", "Quarterly Plan", "Daily Pass"
   screenshotUrl String? // proof-of-payment screenshot from the public self-booking flow
+  refundAmount Int? // set on refund — may be less than `amount` for a partial refund; the retained portion (amount - refundAmount) still counts toward the member's paid total
   createdAt DateTime      @default(now())
 
   branch Branch @relation(fields: [branchId], references: [id])

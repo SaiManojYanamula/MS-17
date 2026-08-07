@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 
 // Start of the member's *current* billing cycle, derived by walking back
@@ -22,6 +22,15 @@ function cycleStart(plan: string, expiresAt: Date, now: Date): Date {
   else if (plan === 'YEARLY') d.setMonth(d.getMonth() - 12);
   else d.setDate(d.getDate() - 1); // DAILY_PASS
   return d;
+}
+
+// What a payment actually still counts for toward "paid toward the fee" —
+// a full PAID amount, ₹0 for a fully refunded one, or whatever portion
+// wasn't refunded for a partial refund (amount - refundAmount).
+function netPaid(p: { status: string; amount: number; refundAmount: number | null }): number {
+  if (p.status === 'PAID') return p.amount;
+  if (p.status === 'REFUNDED') return Math.max(p.amount - (p.refundAmount ?? p.amount), 0);
+  return 0;
 }
 
 @Injectable()
@@ -53,12 +62,14 @@ export class PaymentsService {
     // then the rest on joining day) — Due has to be the *cumulative*
     // shortfall for the member's current cycle, not just this one
     // transaction, or a second installment would wrongly look like a fresh
-    // ₹0-paid charge instead of closing out the balance.
+    // ₹0-paid charge instead of closing out the balance. REFUNDED rows are
+    // included too (not just PAID) so a partial refund only removes the
+    // refunded portion from that total, not the whole original amount.
     const memberIds = [...new Set(payments.map((p) => p.memberId))];
     const allPaidForMembers = memberIds.length
       ? await this.prisma.payment.findMany({
-          where: { tenantId, memberId: { in: memberIds }, status: 'PAID' },
-          select: { memberId: true, amount: true, createdAt: true },
+          where: { tenantId, memberId: { in: memberIds }, status: { in: ['PAID', 'REFUNDED'] } },
+          select: { memberId: true, amount: true, refundAmount: true, status: true, createdAt: true },
         })
       : [];
 
@@ -69,7 +80,7 @@ export class PaymentsService {
       const start = cycleStart(p.member.plan, p.member.expiresAt, now);
       const totalPaid = allPaidForMembers
         .filter((x) => x.memberId === p.memberId && x.createdAt >= start)
-        .reduce((sum, x) => sum + x.amount, 0);
+        .reduce((sum, x) => sum + netPaid(x), 0);
 
       return {
         ...p,
@@ -106,8 +117,8 @@ export class PaymentsService {
 
     const memberIds = members.map((m) => m.id);
     const allPaid = await this.prisma.payment.findMany({
-      where: { tenantId, memberId: { in: memberIds }, status: 'PAID' },
-      select: { memberId: true, amount: true, createdAt: true },
+      where: { tenantId, memberId: { in: memberIds }, status: { in: ['PAID', 'REFUNDED'] } },
+      select: { memberId: true, amount: true, refundAmount: true, status: true, createdAt: true },
     });
 
     return members
@@ -117,7 +128,7 @@ export class PaymentsService {
         const start = cycleStart(member.plan, member.expiresAt, now);
         const paid = allPaid
           .filter((x) => x.memberId === member.id && x.createdAt >= start)
-          .reduce((sum, x) => sum + x.amount, 0);
+          .reduce((sum, x) => sum + netPaid(x), 0);
         return { member, fee, paid, due: Math.max(fee - paid, 0) };
       })
       .filter((x): x is NonNullable<typeof x> => x !== null);
@@ -181,13 +192,21 @@ export class PaymentsService {
     return this.prisma.payment.create({ data: { ...data, tenantId, branchId } });
   }
 
-  async refund(tenantId: string, branchId: string, id: string) {
+  async refund(tenantId: string, branchId: string, id: string, refundAmount?: number) {
     const payment = await this.prisma.payment.findFirst({ where: { id, tenantId, branchId } });
     if (!payment) throw new NotFoundException('Payment not found');
 
+    // Defaults to a full refund when no amount is given — but a partial
+    // refund (e.g. prorated for unused days left on the plan) is just as
+    // valid, as long as it doesn't exceed what was actually paid.
+    const amount = refundAmount ?? payment.amount;
+    if (!Number.isFinite(amount) || amount <= 0 || amount > payment.amount) {
+      throw new BadRequestException(`Refund amount must be between ₹1 and ₹${payment.amount}`);
+    }
+
     return this.prisma.payment.update({
       where: { id },
-      data: { status: 'REFUNDED' },
+      data: { status: 'REFUNDED', refundAmount: amount },
     });
   }
 }

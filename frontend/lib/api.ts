@@ -196,7 +196,8 @@ export const api = {
     if (data.screenshot) formData.append('screenshot', data.screenshot);
     return request('/payments', { method: 'POST', body: formData });
   },
-  refundPayment: (id: string) => request(`/payments/${id}/refund`, { method: 'PATCH' }),
+  refundPayment: (id: string, amount?: number) =>
+    request(`/payments/${id}/refund`, { method: 'PATCH', body: JSON.stringify({ amount }) }),
 
   expenses: () => request('/expenses'),
   expensesSummary: () => request('/expenses/summary'),
