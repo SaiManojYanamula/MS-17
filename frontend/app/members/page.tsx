@@ -177,9 +177,8 @@
 //           </button>
 //         </div>
 
-  
 //       </div>
-   
+
 //       <div className="flex gap-6 border-b border-black/10 mb-6 text-sm overflow-x-auto">
 //         {tabs.map((t) => (
 //           <button
@@ -458,8 +457,6 @@
 //   );
 // }
 
-
-
 "use client";
 
 import { useEffect, useState } from "react";
@@ -488,9 +485,9 @@ export default function MembersPage() {
   const { hasRole } = useAuth();
   const canDelete = hasRole("TENANT_OWNER", "BRANCH_MANAGER");
   const canImport = hasRole("TENANT_OWNER", "BRANCH_MANAGER");
-  const [filter, setFilter] = useState
-    "all" | "active" | "expiring" | "expired"
-  >("all");
+const [filter, setFilter] = useState<
+  "all" | "active" | "expiring" | "expired"
+>("all");
   const [search, setSearch] = useState("");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
