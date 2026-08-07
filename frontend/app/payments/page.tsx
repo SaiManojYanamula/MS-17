@@ -18,6 +18,26 @@ const statusMap: Record<string, string | undefined> = {
 
 const EMPTY_SUMMARY = { collectedThisMonth: 0, pendingDues: 0, transactions: 0, avgTransaction: 0 };
 
+const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+// YYYY-MM-DD in local time — Date#toISOString() shifts to UTC first, which
+// can land on the wrong day for users east of UTC (e.g. India).
+function toDateInputValue(d: Date): string {
+  const yr = d.getFullYear();
+  const mo = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${yr}-${mo}-${day}`;
+}
+
+// First and last calendar day of the given month (0-11) in the current year.
+function monthRange(monthIndex: number) {
+  const year = new Date().getFullYear();
+  return {
+    from: toDateInputValue(new Date(year, monthIndex, 1)),
+    to: toDateInputValue(new Date(year, monthIndex + 1, 0)),
+  };
+}
+
 export default function PaymentsPage() {
   const { hasRole } = useAuth();
   const [tab, setTab] = useState('All Transactions');
@@ -136,10 +156,14 @@ export default function PaymentsPage() {
     return new Date(y, m - 1, 1).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
   };
 
-  const refund = async (id: string) => {
+  const refund = async (t: any) => {
+    if (!window.confirm(`Refund ₹${t.amount} paid by ${memberNameOf(t.member)}? This can't be undone.`)) {
+      return;
+    }
     setError('');
+    const id = t.id;
     const snapshot = transactions;
-    setTransactions((prev) => prev.map((t: any) => (t.id === id ? { ...t, status: 'REFUNDED' } : t)));
+    setTransactions((prev) => prev.map((x: any) => (x.id === id ? { ...x, status: 'REFUNDED' } : x)));
     setRefundingId(id);
     try {
       await api.refundPayment(id);
@@ -200,7 +224,31 @@ export default function PaymentsPage() {
       </div>
 
       {tab !== 'Pending' && (
-      <div className="bg-card rounded-xl p-4 border border-black/5 mb-6 flex flex-wrap items-end gap-3">
+      <div className="bg-card rounded-xl p-4 border border-black/5 mb-6">
+        <div className="flex flex-wrap gap-1.5 mb-3">
+          {MONTH_NAMES.map((name, i) => {
+            const active = appliedFromDate === monthRange(i).from && appliedToDate === monthRange(i).to;
+            return (
+              <button
+                key={name}
+                type="button"
+                onClick={() => {
+                  const { from, to } = monthRange(i);
+                  setFromDate(from);
+                  setToDate(to);
+                  setAppliedFromDate(from);
+                  setAppliedToDate(to);
+                }}
+                className={`text-xs px-2.5 py-1 rounded-full border ${
+                  active ? 'bg-sidebar text-white border-sidebar' : 'border-black/10 text-gray-500 hover:bg-black/5'
+                }`}
+              >
+                {name}
+              </button>
+            );
+          })}
+        </div>
+        <div className="flex flex-wrap items-end gap-3">
         <div>
           <label className="block text-xs text-gray-500 mb-1">From</label>
           <input
@@ -239,6 +287,7 @@ export default function PaymentsPage() {
             </div>
           </div>
         )}
+        </div>
       </div>
       )}
 
@@ -406,7 +455,7 @@ export default function PaymentsPage() {
                       <td className="p-4">
                         {hasRole('TENANT_OWNER', 'BRANCH_MANAGER') && t.status === 'PAID' && (
                           <button
-                            onClick={() => refund(t.id)}
+                            onClick={() => refund(t)}
                             disabled={refundingId === t.id}
                             className="text-xs text-expiring disabled:opacity-60"
                           >

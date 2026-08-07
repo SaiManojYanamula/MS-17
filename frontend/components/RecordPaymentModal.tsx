@@ -14,16 +14,50 @@ export default function RecordPaymentModal({
   const [members, setMembers] = useState<any[]>([]);
   const [memberId, setMemberId] = useState('');
   const [amount, setAmount] = useState('');
+  const [cycles, setCycles] = useState('1');
   const [method, setMethod] = useState('UPI');
   const [label, setLabel] = useState('');
   const [labelTouched, setLabelTouched] = useState(false);
   const [screenshot, setScreenshot] = useState<File | null>(null);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [feeByPlan, setFeeByPlan] = useState<Record<string, number | null | undefined>>({});
 
   useEffect(() => {
     api.members().then((res) => setMembers(res.members ?? [])).catch(() => {});
+    api
+      .myTenant()
+      .then((res) =>
+        setFeeByPlan({
+          MONTHLY: res.tenant?.monthlyFee,
+          QUARTERLY: res.tenant?.quarterlyFee,
+          YEARLY: res.tenant?.yearlyFee,
+          DAILY_PASS: res.tenant?.dailyPassFee,
+        }),
+      )
+      .catch(() => {});
   }, []);
+
+  const selectedMember = members.find((m) => m.id === memberId);
+  const fee = selectedMember ? feeByPlan[selectedMember.plan] : null;
+
+  // Months (or plan cycles) times the plan's fee auto-fills Amount — still
+  // editable by hand for a partial/odd payment, in which case the "≈ X
+  // cycles" hint below just reflects whatever Amount actually is.
+  useEffect(() => {
+    if (!fee || !cycles) return;
+    setAmount(String(Math.round(Number(cycles) * fee)));
+  }, [cycles, fee]);
+
+  // Roughly how many calendar days one plan cycle spans — used only to turn
+  // "you paid 1.08x the fee" into an intuitive day count, not for anything
+  // that touches the member's actual expiry math (that stays exact, done
+  // server-side via addMonthsClamped).
+  const PLAN_DAYS: Record<string, number> = { MONTHLY: 30, QUARTERLY: 91, YEARLY: 365, DAILY_PASS: 1 };
+
+  const cyclesCovered = fee && Number(amount) > 0 ? Number(amount) / fee : null;
+  const daysCovered =
+    cyclesCovered != null && selectedMember ? Math.round(cyclesCovered * (PLAN_DAYS[selectedMember.plan] ?? 30)) : null;
 
   // Auto-fills from the selected member's plan so staff isn't forced to
   // type a label for every payment — still editable for anything unusual
@@ -71,6 +105,25 @@ export default function RecordPaymentModal({
               ))}
             </select>
           </div>
+          {fee != null && (
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">
+                {selectedMember?.plan === 'MONTHLY' ? 'Months' : 'Plan cycles'} being paid for
+              </label>
+              <input
+                type="number"
+                min="1"
+                step="1"
+                value={cycles}
+                onChange={(e) => setCycles(e.target.value)}
+                className="w-full border border-black/10 rounded-lg px-3 py-2 text-sm"
+              />
+              <p className="text-[11px] text-gray-400 mt-1">
+                {formatPlan(selectedMember?.plan)} fee is ₹{fee} — Amount below auto-fills, edit it directly for a
+                partial payment.
+              </p>
+            </div>
+          )}
           <div>
             <label className="block text-xs text-gray-500 mb-1">Label</label>
             <input
@@ -96,6 +149,12 @@ export default function RecordPaymentModal({
                 required
                 className="w-full border border-black/10 rounded-lg px-3 py-2 text-sm"
               />
+              {daysCovered != null && (
+                <p className="text-[11px] text-gray-400 mt-1">
+                  ≈ {daysCovered} day{daysCovered === 1 ? '' : 's'} of validity
+                  {cyclesCovered != null && cyclesCovered.toFixed(2) !== '1.00' ? ` (${cyclesCovered.toFixed(2)}x the fee)` : ''}
+                </p>
+              )}
             </div>
             <div>
               <label className="block text-xs text-gray-500 mb-1">Method</label>
