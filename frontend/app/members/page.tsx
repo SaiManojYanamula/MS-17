@@ -245,11 +245,7 @@ export default function MembersPage() {
                 <th className="font-normal">PLAN</th>
                 <th className="font-normal">BATCH</th>
                 <th className="font-normal">SEAT</th>
-<<<<<<< Updated upstream
-                <th className="font-normal">EXPIRES</th>
-=======
                 <th className="font-normal">SEAT</th>
->>>>>>> Stashed changes
                 <th className="font-normal">JOINED</th>
                 {/* <th className="font-normal">EXPIRES</th> */}
                 <th className="font-normal">STATUS</th>
