@@ -177,36 +177,39 @@ export default function MembersPage() {
           </button>
         </div>
 
-        <div className="flex items-center border border-black/10 rounded-lg overflow-hidden shrink-0 text-sm">
-          <input
-            type="date"
-            value={fromDate}
-            onChange={(e) => setFromDate(e.target.value)}
-            className="border border-black/10 rounded-lg px-2 py-2 text-sm shrink-0"
-          />
-          <input
-            type="date"
-            value={toDate}
-            onChange={(e) => setToDate(e.target.value)}
-            min={fromDate || undefined}
-            className="border border-black/10 rounded-lg px-2 py-2 text-sm shrink-0"
-          />
-          <button
-            onClick={applyDateRange}
-            disabled={!fromDate || !toDate}
-            className="bg-sidebar text-white text-sm px-3 py-2 rounded-lg shrink-0 disabled:opacity-40"
-          >
-            Apply
-          </button>
-          {(appliedFromDate || appliedToDate) && (
-            <button
-              onClick={clearDateRange}
-              className="text-xs text-gray-400 underline shrink-0"
-            >
-              Clear
-            </button>
-          )}
-        </div>
+    {/* date range - own row now, won't overlap/overflow */}
+    <div className="flex items-center gap-2 mb-6 flex-wrap">
+      <div className="flex items-center border border-black/10 rounded-lg overflow-hidden shrink-0 text-sm">
+        <input
+          type="date"
+          value={fromDate}
+          onChange={(e) => setFromDate(e.target.value)}
+          className="px-2 py-2 text-sm shrink-0"
+        />
+        <input
+          type="date"
+          value={toDate}
+          onChange={(e) => setToDate(e.target.value)}
+          min={fromDate || undefined}
+          className="px-2 py-2 text-sm shrink-0"
+        />
+        <button
+          onClick={applyDateRange}
+          disabled={!fromDate || !toDate}
+          className="bg-sidebar text-white text-sm px-3 py-2 shrink-0 disabled:opacity-40"
+        >
+          Apply
+        </button>
+      </div>
+      {(appliedFromDate || appliedToDate) && (
+        <button
+          onClick={clearDateRange}
+          className="text-xs text-gray-400 underline shrink-0"
+        >
+          Clear
+        </button>
+      )}
+    </div>
       </div>
       <div className="flex gap-6 border-b border-black/10 mb-6 text-sm overflow-x-auto">
         {tabs.map((t) => (
