@@ -177,7 +177,9 @@ export default function MembersPage() {
           </button>
         </div>
 
-    {/* date range - own row now, won't overlap/overflow */}
+  
+      </div>
+        {/* date range - own row now, won't overlap/overflow */}
     <div className="flex items-center gap-2 mb-6 flex-wrap">
       <div className="flex items-center border border-black/10 rounded-lg overflow-hidden shrink-0 text-sm">
         <input
@@ -210,7 +212,6 @@ export default function MembersPage() {
         </button>
       )}
     </div>
-      </div>
       <div className="flex gap-6 border-b border-black/10 mb-6 text-sm overflow-x-auto">
         {tabs.map((t) => (
           <button
