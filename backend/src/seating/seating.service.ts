@@ -60,12 +60,16 @@ export class SeatingService {
     return this.prisma.zone.findUnique({ where: { id: zone.id }, include: { seats: true } });
   }
 
-  // Adds `count` more seats to an existing zone. Prefers continuing right
+  // Adds `count` more seats to an existing zone, always continuing right
   // after this zone's own true highest seat number — a zone that lost seats
   // has a genuinely free gap right after it (e.g. Zone A 1-10 loses seat 1,
   // renumbers to 1-9 — seat 10 is free and should be reused, not skipped).
-  // Only falls back to the branch's highest seat number + 1 when that
-  // immediate range is actually taken by another zone, to avoid colliding.
+  // If that immediate range runs into another zone before `count` seats
+  // fit, this rejects with exactly how many *do* fit rather than silently
+  // parking the new seats far away at the branch's highest number — a
+  // disconnected block like "122-126" tacked onto a room that's physically
+  // seats 1-38 doesn't correspond to anything real and is more confusing
+  // than just telling staff there isn't room.
   async addSeatsToZone(tenantId: string, branchId: string, zoneId: string, count: number) {
     if (!Number.isInteger(count) || count < 1) {
       throw new BadRequestException('Enter a valid number of seats to add');
@@ -88,18 +92,19 @@ export class SeatingService {
     });
     const zoneEnd = zoneMax._max.seatNumber ?? zone.startSeat - 1;
 
-    let startSeat = zoneEnd + 1;
-    let endSeat = startSeat + count - 1;
+    const startSeat = zoneEnd + 1;
+    const endSeat = startSeat + count - 1;
     const overlap = await this.prisma.seat.findFirst({
       where: { branchId, seatNumber: { gte: startSeat, lte: endSeat } },
+      orderBy: { seatNumber: 'asc' },
     });
     if (overlap) {
-      const highest = await this.prisma.seat.aggregate({
-        where: { branchId },
-        _max: { seatNumber: true },
-      });
-      startSeat = Math.max(highest._max.seatNumber ?? 0, zoneEnd) + 1;
-      endSeat = startSeat + count - 1;
+      const roomFor = overlap.seatNumber - startSeat;
+      throw new BadRequestException(
+        roomFor > 0
+          ? `Only ${roomFor} more seat${roomFor === 1 ? '' : 's'} fit here before seat ${overlap.seatNumber} (already used by another zone) — try adding ${roomFor}, or free up space there first.`
+          : `Seat ${startSeat} is already used by another zone — there's no room to add seats directly after this one.`,
+      );
     }
 
     await this.prisma.$transaction([
